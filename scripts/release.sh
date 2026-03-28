@@ -41,6 +41,7 @@ if [ -z "${TAP_DIR}" ] || [ ! -d "${TAP_DIR}" ]; then
   exit 0
 fi
 
+mkdir -p "${TAP_DIR}/Formula"
 cat > "${TAP_DIR}/Formula/bx.rb" << FORMULA
 class Bx < Formula
   desc "Launch apps in a macOS sandbox — only the project directory is accessible"
