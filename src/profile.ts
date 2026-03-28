@@ -1,7 +1,7 @@
 import { existsSync, globSync, readFileSync, readdirSync, statSync } from "node:fs"
 import { join, resolve } from "node:path"
 
-const PROTECTED_DOTDIRS = [
+export const PROTECTED_DOTDIRS = [
   ".Trash",
   ".ssh",
   ".gnupg",
@@ -24,10 +24,50 @@ function parseLines(filePath: string): string[] {
 }
 
 /**
+ * Apply a single .bxignore file: resolve glob patterns relative to baseDir.
+ */
+function applyIgnoreFile(filePath: string, baseDir: string, ignored: string[]) {
+  for (const line of parseLines(filePath)) {
+    for (const match of globSync(line, { cwd: baseDir })) {
+      ignored.push(resolve(baseDir, match))
+    }
+  }
+}
+
+/**
+ * Recursively find and apply .bxignore files in a directory tree.
+ */
+function collectIgnoreFilesRecursive(dir: string, ignored: string[]) {
+  const ignoreFile = join(dir, ".bxignore")
+  if (existsSync(ignoreFile)) {
+    applyIgnoreFile(ignoreFile, dir, ignored)
+  }
+
+  let entries: string[]
+  try {
+    entries = readdirSync(dir)
+  } catch {
+    return
+  }
+
+  for (const name of entries) {
+    if (name.startsWith(".") || name === "node_modules") continue
+    const fullPath = join(dir, name)
+    try {
+      if (statSync(fullPath).isDirectory()) {
+        collectIgnoreFilesRecursive(fullPath, ignored)
+      }
+    } catch {
+      // Permission denied or similar — skip
+    }
+  }
+}
+
+/**
  * Parse ~/.bxallow and return a set of all allowed directories.
  */
-export function parseAllowedDirs(home: string, workDir: string): Set<string> {
-  const allowed = new Set([workDir])
+export function parseAllowedDirs(home: string, workDirs: string[]): Set<string> {
+  const allowed = new Set(workDirs)
   for (const line of parseLines(join(home, ".bxallow"))) {
     const absolute = resolve(home, line)
     if (existsSync(absolute) && statSync(absolute).isDirectory()) {
@@ -75,19 +115,17 @@ export function collectBlockedDirs(
 
 /**
  * Collect paths to deny from .bxignore files and built-in protected dotdirs.
+ * Searches ~/.bxignore and recursively through all workdirs.
  */
-export function collectIgnoredPaths(home: string, workDir: string): string[] {
+export function collectIgnoredPaths(home: string, workDirs: string[]): string[] {
   const ignored: string[] = PROTECTED_DOTDIRS.map((d) => join(home, d))
 
-  for (const [filePath, baseDir] of [
-    [join(home, ".bxignore"), home],
-    [join(workDir, ".bxignore"), workDir],
-  ]) {
-    for (const line of parseLines(filePath)) {
-      for (const match of globSync(line, { cwd: baseDir })) {
-        ignored.push(resolve(baseDir, match))
-      }
-    }
+  // Global ~/.bxignore
+  applyIgnoreFile(join(home, ".bxignore"), home, ignored)
+
+  // Recursive .bxignore in each workdir and its subdirectories
+  for (const workDir of workDirs) {
+    collectIgnoreFilesRecursive(workDir, ignored)
   }
 
   return ignored
@@ -96,7 +134,7 @@ export function collectIgnoredPaths(home: string, workDir: string): string[] {
 /**
  * Generate the SBPL sandbox profile string.
  */
-export function generateProfile(workDir: string, blockedDirs: string[], ignoredPaths: string[]): string {
+export function generateProfile(workDirs: string[], blockedDirs: string[], ignoredPaths: string[]): string {
   const denyRules = blockedDirs
     .map((dir) => `  (subpath "${dir}")`)
     .join("\n")
@@ -109,7 +147,7 @@ export function generateProfile(workDir: string, blockedDirs: string[], ignoredP
     : ""
 
   return `; Auto-generated sandbox profile
-; Working directory: ${workDir}
+; Working directories: ${workDirs.join(", ")}
 
 (version 1)
 (allow default)

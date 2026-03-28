@@ -5,7 +5,7 @@ export type Mode = (typeof MODES)[number]
 
 export interface Args {
   mode: Mode
-  workArg: string
+  workArgs: string[]
   verbose: boolean
   profileSandbox: boolean
   execCmd: string[]
@@ -25,22 +25,26 @@ export function parseArgs(): Args {
     ? rawArgs.slice(0, doubleDashIdx).filter((a) => !a.startsWith("--"))
     : positional
 
-  // Determine mode and workdir
+  // Determine mode and workdirs
   let mode: Mode = "code"
-  let workArg = "."
+  let workArgs: string[]
 
   if (beforeDash.length > 0 && MODES.includes(beforeDash[0] as Mode)) {
     mode = beforeDash[0] as Mode
-    workArg = beforeDash[1] ?? "."
-  } else if (beforeDash.length > 0) {
-    workArg = beforeDash[0]
+    workArgs = beforeDash.slice(1)
+  } else {
+    workArgs = beforeDash
+  }
+
+  if (workArgs.length === 0) {
+    workArgs = ["."]
   }
 
   if (mode === "exec" && execCmd.length === 0) {
     console.error("sandbox: exec mode requires a command after \"--\"")
-    console.error("usage: bx exec [workdir] -- command [args...]")
+    console.error("usage: bx exec [workdir...] -- command [args...]")
     process.exit(1)
   }
 
-  return { mode, workArg, verbose, profileSandbox, execCmd }
+  return { mode, workArgs, verbose, profileSandbox, execCmd }
 }

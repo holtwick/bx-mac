@@ -30,7 +30,7 @@ export function setupVSCodeProfile(home: string) {
  */
 export function buildCommand(
   mode: Mode,
-  workDir: string,
+  workDirs: string[],
   home: string,
   profileSandbox: boolean,
   execCmd: string[],
@@ -43,7 +43,7 @@ export function buildCommand(
         args.push("--user-data-dir", join(dataDir, "data"))
         args.push("--extensions-dir", join(dataDir, "extensions"))
       }
-      args.push(workDir)
+      args.push(...workDirs)
       return { bin: VSCODE_APP, args }
     }
     case "term": {
@@ -51,7 +51,7 @@ export function buildCommand(
       return { bin: shell, args: ["-l"] }
     }
     case "claude": {
-      return { bin: "claude", args: [workDir] }
+      return { bin: "claude", args: [workDirs[0]] }
     }
     case "exec": {
       return { bin: execCmd[0], args: execCmd.slice(1) }
