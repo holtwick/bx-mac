@@ -87,6 +87,9 @@ bx claude ~/work/my-project
 # ⚡ Run a script in a sandbox
 bx exec ~/work/my-project -- python train.py
 
+# 🔍 Preview what will be protected (no launch)
+bx --dry ~/work/my-project
+
 # 🔍 See the generated sandbox profile
 bx --verbose ~/work/my-project
 ```
@@ -95,6 +98,7 @@ bx --verbose ~/work/my-project
 
 | Option | Description |
 |---|---|
+| `--dry` | Show a tree of all protected, read-only, and accessible paths — don't launch anything |
 | `--verbose` | Print the generated sandbox profile to stderr |
 | `--profile-sandbox` | Use an isolated VSCode profile (separate extensions/settings, `code` mode only) |
 

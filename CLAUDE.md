@@ -30,6 +30,7 @@ bx claude [workdir]                         # Claude Code CLI
 bx exec [workdir] -- command [args...]      # arbitrary command
 
 # Options (work with all modes)
+bx --dry ~/work/my-project                  # show what will be protected
 bx --verbose term ~/work/my-project         # print generated .sb profile
 bx code --profile-sandbox ~/work/my-project # isolated VSCode profile
 ```
