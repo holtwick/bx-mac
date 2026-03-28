@@ -63,18 +63,55 @@ function collectIgnoreFilesRecursive(dir: string, ignored: string[]) {
   }
 }
 
+export interface HomeConfig {
+  allowed: Set<string>
+  readOnly: Set<string>
+}
+
 /**
- * Parse ~/.bxallow and return a set of all allowed directories.
+ * Parse ~/.bxignore for RW:/RO: prefixed lines and return allowed directories.
+ * Lines without prefix are ignored here (handled by collectIgnoredPaths).
+ * Also checks for deprecated ~/.bxallow and migrates its entries.
  */
-export function parseAllowedDirs(home: string, workDirs: string[]): Set<string> {
+export function parseHomeConfig(home: string, workDirs: string[]): HomeConfig {
   const allowed = new Set(workDirs)
-  for (const line of parseLines(join(home, ".bxallow"))) {
-    const absolute = resolve(home, line)
-    if (existsSync(absolute) && statSync(absolute).isDirectory()) {
-      allowed.add(absolute)
+  const readOnly = new Set<string>()
+
+  // Deprecated: migrate ~/.bxallow entries as RW
+  const bxallowPath = join(home, ".bxallow")
+  if (existsSync(bxallowPath)) {
+    console.error("sandbox: WARNING — ~/.bxallow is deprecated. Move entries to ~/.bxignore with RW: prefix.")
+    for (const line of parseLines(bxallowPath)) {
+      const absolute = resolve(home, line)
+      if (existsSync(absolute) && statSync(absolute).isDirectory()) {
+        allowed.add(absolute)
+      }
     }
   }
-  return allowed
+
+  // Parse RW:/RO: entries from ~/.bxignore
+  for (const line of parseLines(join(home, ".bxignore"))) {
+    let prefix = ""
+    let path = line
+    const match = line.match(/^(RW|RO):(.+)$/i)
+    if (match) {
+      prefix = match[1].toUpperCase()
+      path = match[2].trim()
+    }
+
+    if (!prefix) continue // plain deny lines handled elsewhere
+
+    const absolute = resolve(home, path)
+    if (!existsSync(absolute) || !statSync(absolute).isDirectory()) continue
+
+    if (prefix === "RW") {
+      allowed.add(absolute)
+    } else {
+      readOnly.add(absolute)
+    }
+  }
+
+  return { allowed, readOnly }
 }
 
 /**
@@ -115,13 +152,21 @@ export function collectBlockedDirs(
 
 /**
  * Collect paths to deny from .bxignore files and built-in protected dotdirs.
- * Searches ~/.bxignore and recursively through all workdirs.
+ * Searches ~/.bxignore (skipping RW:/RO: lines) and recursively through all workdirs.
  */
 export function collectIgnoredPaths(home: string, workDirs: string[]): string[] {
   const ignored: string[] = PROTECTED_DOTDIRS.map((d) => join(home, d))
 
-  // Global ~/.bxignore
-  applyIgnoreFile(join(home, ".bxignore"), home, ignored)
+  // Global ~/.bxignore — only plain lines (deny), skip RW:/RO: prefixed lines
+  const globalIgnore = join(home, ".bxignore")
+  if (existsSync(globalIgnore)) {
+    const denyLines = parseLines(globalIgnore).filter((l) => !l.match(/^(RW|RO):/i))
+    for (const line of denyLines) {
+      for (const match of globSync(line, { cwd: home })) {
+        ignored.push(resolve(home, match))
+      }
+    }
+  }
 
   // Recursive .bxignore in each workdir and its subdirectories
   for (const workDir of workDirs) {
@@ -134,7 +179,7 @@ export function collectIgnoredPaths(home: string, workDirs: string[]): string[] 
 /**
  * Generate the SBPL sandbox profile string.
  */
-export function generateProfile(workDirs: string[], blockedDirs: string[], ignoredPaths: string[]): string {
+export function generateProfile(workDirs: string[], blockedDirs: string[], ignoredPaths: string[], readOnlyDirs: string[] = []): string {
   const denyRules = blockedDirs
     .map((dir) => `  (subpath "${dir}")`)
     .join("\n")
@@ -144,6 +189,10 @@ export function generateProfile(workDirs: string[], blockedDirs: string[], ignor
         const isDir = existsSync(p) && statSync(p).isDirectory()
         return isDir ? `  (subpath "${p}")` : `  (literal "${p}")`
       }).join("\n")}\n)\n`
+    : ""
+
+  const readOnlyRules = readOnlyDirs.length > 0
+    ? `\n; Read-only directories\n(deny file-write*\n${readOnlyDirs.map((dir) => `  (subpath "${dir}")`).join("\n")}\n)\n`
     : ""
 
   return `; Auto-generated sandbox profile
@@ -156,6 +205,6 @@ export function generateProfile(workDirs: string[], blockedDirs: string[], ignor
 (deny file*
 ${denyRules}
 )
-${ignoredRules}
+${ignoredRules}${readOnlyRules}
 `
 }

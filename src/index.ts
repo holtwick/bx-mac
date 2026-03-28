@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url"
 import process from "node:process"
 import { checkOwnSandbox, checkVSCodeTerminal, checkExternalSandbox, checkWorkDirs } from "./guards.js"
 import { parseArgs } from "./args.js"
-import { PROTECTED_DOTDIRS, parseAllowedDirs, collectBlockedDirs, collectIgnoredPaths, generateProfile } from "./profile.js"
+import { PROTECTED_DOTDIRS, parseHomeConfig, collectBlockedDirs, collectIgnoredPaths, generateProfile } from "./profile.js"
 import { setupVSCodeProfile, buildCommand } from "./modes.js"
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
@@ -36,8 +36,10 @@ Options:
   -h, --help           show this help
 
 Configuration:
-  ~/.bxallow           extra allowed directories (one per line)
-  ~/.bxignore          extra blocked paths in $HOME (one per line)
+  ~/.bxignore          sandbox rules (one per line):
+                         path         block access (deny)
+                         rw:path      allow read-write access
+                         ro:path      allow read-only access
   <workdir>/.bxignore  blocked paths in project (supports globs, searched recursively)
 
 https://github.com/holtwick/bx-mac`)
@@ -63,16 +65,20 @@ if (mode === "code" && profileSandbox) {
 }
 
 // --- Build sandbox profile ---
-const allowedDirs = parseAllowedDirs(HOME, WORK_DIRS)
-const blockedDirs = collectBlockedDirs(HOME, HOME, __dirname, allowedDirs)
+const { allowed, readOnly } = parseHomeConfig(HOME, WORK_DIRS)
+const allAccessible = new Set([...allowed, ...readOnly])
+const blockedDirs = collectBlockedDirs(HOME, HOME, __dirname, allAccessible)
 const ignoredPaths = collectIgnoredPaths(HOME, WORK_DIRS)
 
 const extraIgnored = ignoredPaths.length - PROTECTED_DOTDIRS.length
 if (extraIgnored > 0) {
   console.error(`sandbox: .bxignore hides ${extraIgnored} extra path(s)`)
 }
+if (readOnly.size > 0) {
+  console.error(`sandbox: ${readOnly.size} read-only director${readOnly.size === 1 ? "y" : "ies"}`)
+}
 
-const profile = generateProfile(WORK_DIRS, blockedDirs, ignoredPaths)
+const profile = generateProfile(WORK_DIRS, blockedDirs, ignoredPaths, [...readOnly])
 const profilePath = join("/tmp", `bx-${process.pid}.sb`)
 writeFileSync(profilePath, profile)
 

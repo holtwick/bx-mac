@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest"
-import { mkdirSync, rmSync } from "node:fs"
+import { mkdirSync, rmSync, writeFileSync } from "node:fs"
 import { join } from "node:path"
-import { collectBlockedDirs, generateProfile, PROTECTED_DOTDIRS } from "./profile.js"
+import { collectBlockedDirs, generateProfile, parseHomeConfig, PROTECTED_DOTDIRS } from "./profile.js"
 
 describe("PROTECTED_DOTDIRS", () => {
   it("includes essential sensitive directories", () => {
@@ -82,6 +82,61 @@ describe("collectBlockedDirs", () => {
   })
 })
 
+describe("parseHomeConfig", () => {
+  const tmpBase = join("/tmp", `bx-test-config-${process.pid}`)
+  const home = join(tmpBase, "home")
+
+  beforeEach(() => {
+    mkdirSync(join(home, "work", "project-a"), { recursive: true })
+    mkdirSync(join(home, "shared", "libs"), { recursive: true })
+    mkdirSync(join(home, "reference", "docs"), { recursive: true })
+  })
+
+  afterEach(() => {
+    rmSync(tmpBase, { recursive: true, force: true })
+  })
+
+  it("parses RW: entries as allowed dirs", () => {
+    writeFileSync(join(home, ".bxignore"), "RW:shared/libs\n")
+    const { allowed, readOnly } = parseHomeConfig(home, [join(home, "work/project-a")])
+
+    expect(allowed).toContain(join(home, "shared/libs"))
+    expect(readOnly.size).toBe(0)
+  })
+
+  it("parses RO: entries as read-only dirs", () => {
+    writeFileSync(join(home, ".bxignore"), "RO:reference/docs\n")
+    const { allowed, readOnly } = parseHomeConfig(home, [join(home, "work/project-a")])
+
+    expect(readOnly).toContain(join(home, "reference/docs"))
+    expect(allowed).not.toContain(join(home, "reference/docs"))
+  })
+
+  it("is case-insensitive for prefixes", () => {
+    writeFileSync(join(home, ".bxignore"), "rw:shared/libs\nro:reference/docs\n")
+    const { allowed, readOnly } = parseHomeConfig(home, [join(home, "work/project-a")])
+
+    expect(allowed).toContain(join(home, "shared/libs"))
+    expect(readOnly).toContain(join(home, "reference/docs"))
+  })
+
+  it("ignores plain lines (deny rules)", () => {
+    writeFileSync(join(home, ".bxignore"), ".aws\nRW:shared/libs\n")
+    const { allowed, readOnly } = parseHomeConfig(home, [join(home, "work/project-a")])
+
+    expect(allowed.size).toBe(2) // workdir + shared/libs
+    expect(readOnly.size).toBe(0)
+  })
+
+  it("always includes workDirs in allowed", () => {
+    writeFileSync(join(home, ".bxignore"), "")
+    const workDir = join(home, "work/project-a")
+    const { allowed } = parseHomeConfig(home, [workDir])
+
+    expect(allowed).toContain(workDir)
+  })
+})
+
 describe("generateProfile", () => {
   it("produces valid SBPL with version and allow default", () => {
     const profile = generateProfile(
@@ -124,5 +179,30 @@ describe("generateProfile", () => {
     )
 
     expect(profile).toContain("; Working directories: /Users/test/a, /Users/test/b")
+  })
+
+  it("includes deny file-write* rules for read-only dirs", () => {
+    const profile = generateProfile(
+      ["/Users/test/work"],
+      ["/Users/test/Documents"],
+      [],
+      ["/Users/test/shared/libs"],
+    )
+
+    expect(profile).toContain("(deny file-write*")
+    expect(profile).toContain('(subpath "/Users/test/shared/libs")')
+    expect(profile).toContain("; Read-only directories")
+  })
+
+  it("omits read-only section when no RO dirs", () => {
+    const profile = generateProfile(
+      ["/Users/test/work"],
+      ["/Users/test/Documents"],
+      [],
+      [],
+    )
+
+    expect(profile).not.toContain("deny file-write*")
+    expect(profile).not.toContain("Read-only")
   })
 })

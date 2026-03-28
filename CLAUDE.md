@@ -38,20 +38,21 @@ bx code --profile-sandbox ~/work/my-project # isolated VSCode profile
 
 All config files use one entry per line. Empty lines and `#` comments are ignored.
 
-**`~/.bxallow`** — Allow additional directories (paths relative to `$HOME`):
+**`~/.bxignore`** — Unified sandbox rules (paths relative to `$HOME`):
 
 ```gitignore
-# Extra directories the sandbox should not block
-work/bin
-shared/libs
-```
-
-**`~/.bxignore`** — Block sensitive dotdirs beyond the built-in defaults (paths relative to `$HOME`):
-
-```gitignore
+# Block sensitive paths (default, no prefix)
 .aws
 .kube
 .config/sensitive-app
+
+# Allow read-write access to additional directories
+rw:work/bin
+rw:shared/libs
+
+# Allow read-only access (can read but not modify)
+ro:reference/docs
+ro:shared/toolchain
 ```
 
 **`<workdir>/.bxignore`** — Block paths within the project (relative to workdir, supports globs):
@@ -91,13 +92,14 @@ The solution is a **blocklist**: individually deny only the directories that sho
 
 ### How the profile is generated
 
-1. Parse `~/.bxallow` for additional allowed directories
+1. Parse `~/.bxignore` for `rw:` (read-write) and `ro:` (read-only) entries
 2. Scan `$HOME` for non-dot directories (skip `Library` and the script's own directory)
-3. For each directory: if an allowed path is inside it, **descend** and block only its siblings — never deny a parent of an allowed path
+3. For each directory: if an allowed or read-only path is inside it, **descend** and block only its siblings — never deny a parent of an accessible path
 4. Dotfiles (`~/.*/`) and `~/Library` are always accessible (VSCode, Node, shell, and other tools depend on them)
 5. Built-in protected dotdirs are always denied
-6. `~/.bxignore` and `<workdir>/.bxignore` add further deny rules
-7. The generated profile is written to `/tmp` and cleaned up on exit
+6. Plain lines in `~/.bxignore` and `<workdir>/.bxignore` add further deny rules
+7. `ro:` directories get a `deny file-write*` rule (read allowed, write blocked)
+8. The generated profile is written to `/tmp` and cleaned up on exit
 
 ### What is protected
 
@@ -106,8 +108,9 @@ The solution is a **blocklist**: individually deny only the directories that sho
 | `~/Documents`, `~/Desktop`, `~/Downloads`, ... | **blocked** |
 | Other projects (siblings of working dir) | **blocked** |
 | Working directory | **full** |
-| Dirs listed in `~/.bxallow` | **full** |
+| `rw:` dirs in `~/.bxignore` | **full** |
+| `ro:` dirs in `~/.bxignore` | **read-only** |
 | `~/.*/` (dotfiles/dotdirs) | **full** (except protected ones) |
 | `~/Library` | **full** |
 | Built-in protected dotdirs | **blocked** |
-| Paths in `.bxignore` | **blocked** |
+| Plain paths in `.bxignore` | **blocked** |

@@ -28,7 +28,7 @@ bx ~/work/my-project ~/work/shared-lib
 - ⚙️ Keeps VSCode, extensions, shell, Node.js, and other tooling fully functional
 - 🔍 Generates sandbox rules dynamically based on your actual `$HOME` contents
 - 📝 Supports `.bxignore` files (searched recursively) to hide secrets like `.env` files within a project
-- 📂 Supports `~/.bxallow` to grant access to shared utility directories
+- 📂 Supports `rw:` and `ro:` prefixes in `~/.bxignore` to grant read-write or read-only access to extra directories
 - 🗂️ Supports multiple working directories in a single sandbox
 
 ## 🚫 What it doesn't do
@@ -100,30 +100,29 @@ bx --verbose ~/work/my-project
 
 ## 📝 Configuration
 
-bx uses three optional config files — one entry per line, `#` for comments. Project `.bxignore` files are discovered recursively.
-
-### `~/.bxallow`
-
-Allow extra directories beyond the working directory. Paths relative to `$HOME`.
-
-```gitignore
-# Shared shell scripts and utilities
-work/bin
-shared/libs
-```
+bx uses two optional config files — one entry per line, `#` for comments. Project `.bxignore` files are discovered recursively.
 
 ### `~/.bxignore`
 
-Block additional dotdirs or files in your home. Paths relative to `$HOME`.
+Unified sandbox rules for your home directory. Paths relative to `$HOME`. Each line is either a deny rule (no prefix) or an access grant (`rw:` / `ro:` prefix, case-insensitive).
 
 ```gitignore
+# Block additional sensitive paths (no prefix = deny)
 .aws
 .azure
 .kube
 .config/gcloud
+
+# Allow read-write access to extra directories
+rw:work/bin
+rw:shared/libs
+
+# Allow read-only access (can read but not modify)
+ro:reference/docs
+ro:shared/toolchain
 ```
 
-These are blocked **in addition** to the built-in protected list:
+Deny rules are applied **in addition** to the built-in protected list:
 
 > 🔒 `.Trash` `.ssh` `.gnupg` `.docker` `.zsh_sessions` `.cargo` `.gradle` `.gem`
 
@@ -155,10 +154,11 @@ bx generates a macOS sandbox profile at launch time:
 
 1. **Scan** `$HOME` for non-hidden directories
 2. **Block** each one individually with `(deny file* (subpath ...))`
-3. **Skip** all working directories, `~/Library`, dotfiles, and `~/.bxallow` paths
+3. **Skip** all working directories, `~/Library`, dotfiles, and `rw:`/`ro:` paths from `~/.bxignore`
 4. **Descend** into parent directories of allowed paths to block only siblings (because SBPL deny rules always override allow rules)
-5. **Append** deny rules for protected dotdirs, `~/.bxignore`, and `.bxignore` files found recursively in each working directory
-6. **Write** the profile to `/tmp`, launch the app via `sandbox-exec`, clean up on exit
+5. **Append** deny rules for protected dotdirs, plain entries in `~/.bxignore`, and `.bxignore` files found recursively in each working directory
+6. **Apply** `(deny file-write*)` rules for `ro:` directories (read allowed, write blocked)
+7. **Write** the profile to `/tmp`, launch the app via `sandbox-exec`, clean up on exit
 
 ### Why not a simple deny-all + allow?
 
