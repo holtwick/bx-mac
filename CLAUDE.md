@@ -55,13 +55,22 @@ ro:reference/docs
 ro:shared/toolchain
 ```
 
-**`<workdir>/.bxignore`** — Block paths within the project (relative to workdir, supports globs):
+**`<workdir>/.bxignore`** — Block paths within the project (supports globs, `.gitignore`-style matching):
 
 ```gitignore
-.env
-.env.*
-secrets/
-**/*.pem
+# Patterns without "/" match recursively in all subdirectories
+.env              # blocks .env everywhere in the project tree
+.env.*            # blocks .env.local, sub/.env.production, etc.
+*.pem             # blocks all .pem files at any depth
+
+# Leading "/" anchors to the workdir root only
+/.env             # blocks only <workdir>/.env, not sub/.env
+
+# Patterns with "/" (non-leading, non-trailing) are relative to workdir
+config/secrets    # blocks <workdir>/config/secrets, not sub/config/secrets
+
+# Trailing "/" marks directories (does not affect matching scope)
+secrets/          # blocks secrets/ directories at any depth
 ```
 
 ### Built-in protected dotdirs

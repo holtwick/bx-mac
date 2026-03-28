@@ -40,7 +40,7 @@ Configuration:
                          path         block access (deny)
                          rw:path      allow read-write access
                          ro:path      allow read-only access
-  <workdir>/.bxignore  blocked paths in project (supports globs, searched recursively)
+  <workdir>/.bxignore  blocked paths in project (.gitignore-style matching)
 
 https://github.com/holtwick/bx-mac`)
   process.exit(0)

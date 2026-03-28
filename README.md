@@ -128,14 +128,25 @@ Deny rules are applied **in addition** to the built-in protected list:
 
 ### `<project>/.bxignore`
 
-Block paths within the working directory. Supports glob patterns. bx searches for `.bxignore` files **recursively** through the entire project tree (skipping `.`-prefixed dirs and `node_modules`), so you can place them in subdirectories to hide secrets close to where they live.
+Block paths within the working directory. Uses [`.gitignore`-style pattern matching](https://git-scm.com/docs/gitignore#_pattern_format):
+
+| Pattern | Matches | Why |
+|---|---|---|
+| `.env` | `.env` at any depth | No `/` → recursive |
+| `.env.*` | `.env.local`, `sub/.env.production` | No `/` → recursive |
+| `*.pem` | `key.pem`, `sub/deep/cert.pem` | No `/` → recursive |
+| `secrets/` | `secrets/` at any depth | Trailing `/` is a dir marker, not a path separator |
+| `/.env` | Only `<workdir>/.env` | Leading `/` → anchored to root |
+| `config/secrets` | Only `<workdir>/config/secrets` | Contains `/` → relative to workdir |
+
+bx searches for `.bxignore` files **recursively** through the entire project tree (skipping `.`-prefixed dirs and `node_modules`), so you can place them in subdirectories to hide secrets close to where they live.
 
 ```gitignore
 .env
 .env.*
 secrets/
-**/*.pem
-**/*.key
+*.pem
+*.key
 ```
 
 For example, a monorepo might have:

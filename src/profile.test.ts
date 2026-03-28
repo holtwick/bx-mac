@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest"
 import { mkdirSync, rmSync, writeFileSync } from "node:fs"
 import { join } from "node:path"
-import { collectBlockedDirs, generateProfile, parseHomeConfig, PROTECTED_DOTDIRS } from "./profile.js"
+import { collectBlockedDirs, collectIgnoredPaths, generateProfile, parseHomeConfig, PROTECTED_DOTDIRS } from "./profile.js"
 
 describe("PROTECTED_DOTDIRS", () => {
   it("includes essential sensitive directories", () => {
@@ -134,6 +134,104 @@ describe("parseHomeConfig", () => {
     const { allowed } = parseHomeConfig(home, [workDir])
 
     expect(allowed).toContain(workDir)
+  })
+})
+
+describe("collectIgnoredPaths", () => {
+  const tmpBase = join("/tmp", `bx-test-ignore-${process.pid}`)
+  const home = join(tmpBase, "home")
+  const workDir = join(home, "work", "project")
+
+  beforeEach(() => {
+    mkdirSync(join(workDir, "sub", "deep"), { recursive: true })
+    mkdirSync(join(home, ".ssh"), { recursive: true })
+  })
+
+  afterEach(() => {
+    rmSync(tmpBase, { recursive: true, force: true })
+  })
+
+  it("matches simple patterns recursively in workdir subdirectories", () => {
+    // .env exists at root and in a subdirectory
+    writeFileSync(join(workDir, ".env"), "SECRET=1")
+    writeFileSync(join(workDir, "sub", ".env"), "SECRET=2")
+    writeFileSync(join(workDir, ".bxignore"), ".env\n")
+
+    const ignored = collectIgnoredPaths(home, [workDir])
+    expect(ignored).toContain(join(workDir, ".env"))
+    expect(ignored).toContain(join(workDir, "sub", ".env"))
+  })
+
+  it("matches glob patterns recursively in workdir subdirectories", () => {
+    writeFileSync(join(workDir, "key.pem"), "")
+    writeFileSync(join(workDir, "sub", "cert.pem"), "")
+    writeFileSync(join(workDir, "sub", "deep", "other.pem"), "")
+    writeFileSync(join(workDir, ".bxignore"), "*.pem\n")
+
+    const ignored = collectIgnoredPaths(home, [workDir])
+    expect(ignored).toContain(join(workDir, "key.pem"))
+    expect(ignored).toContain(join(workDir, "sub", "cert.pem"))
+    expect(ignored).toContain(join(workDir, "sub", "deep", "other.pem"))
+  })
+
+  it("patterns with a path separator are relative to base dir", () => {
+    mkdirSync(join(workDir, "config", "secrets"), { recursive: true })
+    mkdirSync(join(workDir, "sub", "config", "secrets"), { recursive: true })
+    writeFileSync(join(workDir, ".bxignore"), "config/secrets\n")
+
+    const ignored = collectIgnoredPaths(home, [workDir])
+    // config/secrets contains a slash → relative to workdir, not recursive
+    expect(ignored).toContain(join(workDir, "config", "secrets"))
+    expect(ignored).not.toContain(join(workDir, "sub", "config", "secrets"))
+  })
+
+  it("trailing slash without path separator still matches recursively", () => {
+    mkdirSync(join(workDir, "secrets"), { recursive: true })
+    mkdirSync(join(workDir, "sub", "secrets"), { recursive: true })
+    writeFileSync(join(workDir, ".bxignore"), "secrets/\n")
+
+    const ignored = collectIgnoredPaths(home, [workDir])
+    // secrets/ has no path separator (trailing / is a dir marker) → recursive
+    expect(ignored).toContain(join(workDir, "secrets"))
+    expect(ignored).toContain(join(workDir, "sub", "secrets"))
+  })
+
+  it("matches .env.* pattern recursively", () => {
+    writeFileSync(join(workDir, ".env.local"), "")
+    writeFileSync(join(workDir, "sub", ".env.production"), "")
+    writeFileSync(join(workDir, ".bxignore"), ".env.*\n")
+
+    const ignored = collectIgnoredPaths(home, [workDir])
+    expect(ignored).toContain(join(workDir, ".env.local"))
+    expect(ignored).toContain(join(workDir, "sub", ".env.production"))
+  })
+
+  it("leading / anchors pattern to workdir root only", () => {
+    writeFileSync(join(workDir, ".env"), "SECRET=1")
+    writeFileSync(join(workDir, "sub", ".env"), "SECRET=2")
+    writeFileSync(join(workDir, ".bxignore"), "/.env\n")
+
+    const ignored = collectIgnoredPaths(home, [workDir])
+    expect(ignored).toContain(join(workDir, ".env"))
+    expect(ignored).not.toContain(join(workDir, "sub", ".env"))
+  })
+
+  it("leading / with glob anchors to workdir root", () => {
+    writeFileSync(join(workDir, "config.json"), "")
+    writeFileSync(join(workDir, "sub", "config.json"), "")
+    writeFileSync(join(workDir, ".bxignore"), "/*.json\n")
+
+    const ignored = collectIgnoredPaths(home, [workDir])
+    expect(ignored).toContain(join(workDir, "config.json"))
+    expect(ignored).not.toContain(join(workDir, "sub", "config.json"))
+  })
+
+  it("explicit ** patterns still work", () => {
+    writeFileSync(join(workDir, "sub", "deep", "test.pem"), "")
+    writeFileSync(join(workDir, ".bxignore"), "**/*.pem\n")
+
+    const ignored = collectIgnoredPaths(home, [workDir])
+    expect(ignored).toContain(join(workDir, "sub", "deep", "test.pem"))
   })
 })
 

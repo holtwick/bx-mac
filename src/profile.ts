@@ -24,11 +24,32 @@ function parseLines(filePath: string): string[] {
 }
 
 /**
+ * Convert a .bxignore line to a glob pattern following .gitignore semantics:
+ * - Leading "/" anchors to the base dir (stripped before globbing)
+ * - Patterns without "/" (except trailing) match recursively via ** / prefix
+ * - Patterns with "/" (non-leading, non-trailing) are relative to baseDir
+ * - Trailing "/" marks directories only and doesn't count as path separator
+ */
+function toGlobPattern(line: string): string {
+  // Leading "/" → anchored to base dir, use as-is (strip the slash)
+  if (line.startsWith("/")) return line.slice(1)
+
+  // Strip trailing "/" (directory marker) for the slash check
+  const stripped = line.endsWith("/") ? line.slice(0, -1) : line
+
+  // Contains "/" → already a relative path, use as-is
+  if (stripped.includes("/")) return line
+
+  // No slash → match anywhere in the tree
+  return `**/${line}`
+}
+
+/**
  * Apply a single .bxignore file: resolve glob patterns relative to baseDir.
  */
 function applyIgnoreFile(filePath: string, baseDir: string, ignored: string[]) {
   for (const line of parseLines(filePath)) {
-    for (const match of globSync(line, { cwd: baseDir })) {
+    for (const match of globSync(toGlobPattern(line), { cwd: baseDir })) {
       ignored.push(resolve(baseDir, match))
     }
   }
@@ -162,7 +183,7 @@ export function collectIgnoredPaths(home: string, workDirs: string[]): string[] 
   if (existsSync(globalIgnore)) {
     const denyLines = parseLines(globalIgnore).filter((l) => !l.match(/^(RW|RO):/i))
     for (const line of denyLines) {
-      for (const match of globSync(line, { cwd: home })) {
+      for (const match of globSync(toGlobPattern(line), { cwd: home })) {
         ignored.push(resolve(home, match))
       }
     }
