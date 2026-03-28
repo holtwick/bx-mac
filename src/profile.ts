@@ -152,7 +152,13 @@ export function collectBlockedDirs(
 
     const fullPath = join(parentDir, name)
 
-    if (!statSync(fullPath).isDirectory()) continue
+    let isDir: boolean
+    try {
+      isDir = statSync(fullPath).isDirectory()
+    } catch {
+      continue // Permission denied or similar — skip
+    }
+    if (!isDir) continue
     if (parentDir === home && name === "Library") continue
     if (scriptDir.startsWith(fullPath + "/") || scriptDir === fullPath) continue
     if (allowedDirs.has(fullPath)) continue
@@ -207,7 +213,8 @@ export function generateProfile(workDirs: string[], blockedDirs: string[], ignor
 
   const ignoredRules = ignoredPaths.length > 0
     ? `\n; Hidden paths from .bxignore\n(deny file*\n${ignoredPaths.map((p) => {
-        const isDir = existsSync(p) && statSync(p).isDirectory()
+        let isDir = false
+        try { isDir = existsSync(p) && statSync(p).isDirectory() } catch {}
         return isDir ? `  (subpath "${p}")` : `  (literal "${p}")`
       }).join("\n")}\n)\n`
     : ""

@@ -1,4 +1,4 @@
-import { writeFileSync, rmSync } from "node:fs"
+import { statSync, writeFileSync, rmSync } from "node:fs"
 import { join, resolve, dirname } from "node:path"
 import { spawn } from "node:child_process"
 import { fileURLToPath } from "node:url"
@@ -30,6 +30,7 @@ Usage:
   bx exec [workdir...] -- command [args...]  arbitrary command
 
 Options:
+  --dry                show what will be protected, don't launch
   --verbose            print the generated sandbox profile
   --profile-sandbox    use an isolated VSCode profile (code mode only)
   -v, --version        show version
@@ -46,13 +47,15 @@ https://github.com/holtwick/bx-mac`)
   process.exit(0)
 }
 
-// --- Safety guards ---
-checkOwnSandbox()
-checkVSCodeTerminal()
-checkExternalSandbox()
-
 // --- Parse arguments ---
-const { mode, workArgs, verbose, profileSandbox, execCmd } = parseArgs()
+const { mode, workArgs, verbose, dry, profileSandbox, execCmd } = parseArgs()
+
+// --- Safety guards (skip in dry-run mode) ---
+if (!dry) {
+  checkOwnSandbox()
+  checkVSCodeTerminal()
+  checkExternalSandbox()
+}
 
 const HOME = process.env.HOME!
 const WORK_DIRS = workArgs.map((a) => resolve(a))
@@ -79,8 +82,6 @@ if (readOnly.size > 0) {
 }
 
 const profile = generateProfile(WORK_DIRS, blockedDirs, ignoredPaths, [...readOnly])
-const profilePath = join("/tmp", `bx-${process.pid}.sb`)
-writeFileSync(profilePath, profile)
 
 const dirLabel = WORK_DIRS.length === 1 ? WORK_DIRS[0] : `${WORK_DIRS.length} directories`
 console.error(`sandbox: ${mode} mode, working directory: ${dirLabel}`)
@@ -91,7 +92,68 @@ if (verbose) {
   console.error("--- End of profile ---\n")
 }
 
+// --- Dry run ---
+if (dry) {
+  const R = "\x1b[31m", G = "\x1b[32m", Y = "\x1b[33m", C = "\x1b[36m", D = "\x1b[2m", X = "\x1b[0m"
+
+  type Kind = "blocked" | "ignored" | "read-only" | "workdir"
+  const icon = (k: Kind) => k === "read-only" ? `${Y}◉${X}` : k === "workdir" ? `${G}✔${X}` : `${R}✖${X}`
+  const tag = (k: Kind) => `${D}${k}${X}`
+
+  // Build a tree: each node has an optional kind (if it's an entry) and children
+  interface TreeNode { kind?: Kind; isDir?: boolean; children: Map<string, TreeNode> }
+  const root: TreeNode = { children: new Map() }
+
+  function addEntry(absPath: string, kind: Kind, isDir: boolean) {
+    const rel = absPath.startsWith(HOME + "/") ? absPath.slice(HOME.length + 1) : absPath
+    const parts = rel.split("/")
+    let node = root
+    for (const part of parts) {
+      if (!node.children.has(part)) node.children.set(part, { children: new Map() })
+      node = node.children.get(part)!
+    }
+    node.kind = kind
+    node.isDir = isDir
+  }
+
+  for (const d of blockedDirs) addEntry(d, "blocked", true)
+  for (const p of ignoredPaths) {
+    let isDir = false
+    try { isDir = statSync(p).isDirectory() } catch { if (p.slice(p.lastIndexOf("/") + 1).startsWith(".")) isDir = true }
+    addEntry(p, "ignored", isDir)
+  }
+  for (const d of readOnly) addEntry(d, "read-only", true)
+  for (const d of WORK_DIRS) addEntry(d, "workdir", true)
+
+  function printTree(node: TreeNode, prefix: string) {
+    const entries = [...node.children.entries()].sort((a, b) => a[0].localeCompare(b[0]))
+    for (let i = 0; i < entries.length; i++) {
+      const [name, child] = entries[i]
+      const last = i === entries.length - 1
+      const connector = last ? "└── " : "├── "
+      const pipe = last ? "    " : "│   "
+      if (child.kind) {
+        const suffix = child.isDir ? "/" : ""
+        console.log(`${prefix}${connector}${icon(child.kind)} ${name}${suffix}  ${tag(child.kind)}`)
+      } else {
+        console.log(`${prefix}${connector}${C}${name}/${X}`)
+      }
+      if (child.children.size > 0) {
+        printTree(child, prefix + pipe)
+      }
+    }
+  }
+
+  console.log(`\n${C}~/${X}`)
+  printTree(root, "")
+  console.log(`\n${R}✖${X} = denied  ${Y}◉${X} = read-only  ${G}✔${X} = read-write\n`)
+  process.exit(0)
+}
+
 // --- Launch ---
+const profilePath = join("/tmp", `bx-${process.pid}.sb`)
+writeFileSync(profilePath, profile)
+
 const cmd = buildCommand(mode, WORK_DIRS, HOME, profileSandbox, execCmd)
 
 const child = spawn("sandbox-exec", [

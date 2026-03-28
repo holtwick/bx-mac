@@ -7,6 +7,7 @@ export interface Args {
   mode: Mode
   workArgs: string[]
   verbose: boolean
+  dry: boolean
   profileSandbox: boolean
   execCmd: string[]
 }
@@ -15,6 +16,7 @@ export function parseArgs(): Args {
   const rawArgs = process.argv.slice(2)
 
   const verbose = rawArgs.includes("--verbose")
+  const dry = rawArgs.includes("--dry")
   const profileSandbox = rawArgs.includes("--profile-sandbox")
   const positional = rawArgs.filter((a) => !a.startsWith("--"))
 
@@ -46,5 +48,5 @@ export function parseArgs(): Args {
     process.exit(1)
   }
 
-  return { mode, workArgs, verbose, profileSandbox, execCmd }
+  return { mode, workArgs, verbose, dry, profileSandbox, execCmd }
 }

@@ -10,6 +10,7 @@
     "dist"
   ],
   "scripts": {
+    "start": "npm run build && node ./dist/bx.js",
     "build": "rolldown -c",
     "build:native": "bun build src/index.ts --compile --outfile dist/bx-native --define \"__VERSION__=\\\"$(node -p \"require('./package.json').version\")\\\"\"",
     "sign": "./scripts/sign.sh",
