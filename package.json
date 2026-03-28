@@ -1,0 +1,33 @@
+{
+  "name": "bx-mac",
+  "version": "0.1.0",
+  "description": "Launch apps in a macOS sandbox — only the project directory is accessible",
+  "type": "module",
+  "bin": {
+    "bx": "dist/bx.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "rolldown -c",
+    "release": "./scripts/release.sh",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "sandbox",
+    "macos",
+    "security",
+    "vscode",
+    "claude"
+  ],
+  "author": "Dirk Holtwick",
+  "license": "MIT",
+  "devDependencies": {
+    "rolldown": "^1.0.0-rc.12"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "packageManager": "pnpm@10.33.0"
+}
