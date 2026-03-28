@@ -10,6 +10,7 @@ export interface Args {
   dry: boolean
   profileSandbox: boolean
   execCmd: string[]
+  implicit: boolean
 }
 
 export function parseArgs(): Args {
@@ -30,16 +31,20 @@ export function parseArgs(): Args {
   // Determine mode and workdirs
   let mode: Mode = "code"
   let workArgs: string[]
+  let explicit = false
 
   if (beforeDash.length > 0 && MODES.includes(beforeDash[0] as Mode)) {
     mode = beforeDash[0] as Mode
     workArgs = beforeDash.slice(1)
+    explicit = true
   } else {
     workArgs = beforeDash
   }
 
   if (workArgs.length === 0) {
     workArgs = ["."]
+  } else {
+    explicit = true
   }
 
   if (mode === "exec" && execCmd.length === 0) {
@@ -48,5 +53,5 @@ export function parseArgs(): Args {
     process.exit(1)
   }
 
-  return { mode, workArgs, verbose, dry, profileSandbox, execCmd }
+  return { mode, workArgs, verbose, dry, profileSandbox, execCmd, implicit: !explicit }
 }

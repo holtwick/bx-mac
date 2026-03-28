@@ -1,6 +1,7 @@
 import { statSync, writeFileSync, rmSync } from "node:fs"
 import { join, resolve, dirname } from "node:path"
 import { spawn } from "node:child_process"
+import { createInterface } from "node:readline"
 import { fileURLToPath } from "node:url"
 import process from "node:process"
 import { checkOwnSandbox, checkVSCodeTerminal, checkExternalSandbox, checkWorkDirs } from "./guards.js"
@@ -48,7 +49,22 @@ https://github.com/holtwick/bx-mac`)
 }
 
 // --- Parse arguments ---
-const { mode, workArgs, verbose, dry, profileSandbox, execCmd } = parseArgs()
+const { mode, workArgs, verbose, dry, profileSandbox, execCmd, implicit } = parseArgs()
+
+const HOME = process.env.HOME!
+const WORK_DIRS = workArgs.map((a) => resolve(a))
+
+// --- Confirm when invoked without arguments ---
+if (implicit && !dry) {
+  const rl = createInterface({ input: process.stdin, output: process.stderr })
+  const answer = await new Promise<string>((res) => {
+    rl.question(`sandbox: open ${WORK_DIRS[0]} in VSCode? [Y/n] `, res)
+  })
+  rl.close()
+  if (answer && !answer.match(/^y(es)?$/i)) {
+    process.exit(0)
+  }
+}
 
 // --- Safety guards (skip in dry-run mode) ---
 if (!dry) {
@@ -56,9 +72,6 @@ if (!dry) {
   checkVSCodeTerminal()
   checkExternalSandbox()
 }
-
-const HOME = process.env.HOME!
-const WORK_DIRS = workArgs.map((a) => resolve(a))
 
 checkWorkDirs(WORK_DIRS, HOME)
 
