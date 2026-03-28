@@ -25,6 +25,24 @@ export function checkVSCodeTerminal() {
 }
 
 /**
+ * Abort if any workdir IS $HOME or is not inside $HOME.
+ */
+export function checkWorkDirs(workDirs: string[], home: string) {
+  for (const dir of workDirs) {
+    if (dir === home) {
+      console.error("sandbox: ERROR — working directory cannot be $HOME itself.")
+      console.error("sandbox: Sandboxing your entire home directory is not supported. Aborting.")
+      process.exit(1)
+    }
+    if (!dir.startsWith(home + "/")) {
+      console.error(`sandbox: ERROR — working directory is outside $HOME: ${dir}`)
+      console.error("sandbox: Only directories inside $HOME are supported. Aborting.")
+      process.exit(1)
+    }
+  }
+}
+
+/**
  * Detect if we're inside an unknown sandbox by probing well-known
  * directories that exist on every Mac but would be blocked.
  */

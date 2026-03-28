@@ -3,7 +3,7 @@ import { join, resolve, dirname } from "node:path"
 import { spawn } from "node:child_process"
 import { fileURLToPath } from "node:url"
 import process from "node:process"
-import { checkOwnSandbox, checkVSCodeTerminal, checkExternalSandbox } from "./guards.js"
+import { checkOwnSandbox, checkVSCodeTerminal, checkExternalSandbox, checkWorkDirs } from "./guards.js"
 import { parseArgs } from "./args.js"
 import { PROTECTED_DOTDIRS, parseAllowedDirs, collectBlockedDirs, collectIgnoredPaths, generateProfile } from "./profile.js"
 import { setupVSCodeProfile, buildCommand } from "./modes.js"
@@ -54,6 +54,8 @@ const { mode, workArgs, verbose, profileSandbox, execCmd } = parseArgs()
 
 const HOME = process.env.HOME!
 const WORK_DIRS = workArgs.map((a) => resolve(a))
+
+checkWorkDirs(WORK_DIRS, HOME)
 
 // --- VSCode profile setup ---
 if (mode === "code" && profileSandbox) {
