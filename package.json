@@ -1,6 +1,6 @@
 {
   "name": "bx-mac",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "Launch apps in a macOS sandbox — only the project directory is accessible",
   "type": "module",
   "bin": {
