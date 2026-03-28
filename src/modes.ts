@@ -51,7 +51,7 @@ export function buildCommand(
       return { bin: shell, args: ["-l"] }
     }
     case "claude": {
-      return { bin: "claude", args: [workDirs[0]] }
+      return { bin: "claude", args: [] }
     }
     case "exec": {
       return { bin: execCmd[0], args: execCmd.slice(1) }

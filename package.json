@@ -11,6 +11,7 @@
   ],
   "scripts": {
     "build": "rolldown -c",
+    "test": "vitest run",
     "prepublishOnly": "npm run build",
     "post:release": "./scripts/release.sh"
   },
@@ -25,7 +26,8 @@
   "license": "MIT",
   "devDependencies": {
     "@types/node": "^25.5.0",
-    "rolldown": "^1.0.0-rc.12"
+    "rolldown": "^1.0.0-rc.12",
+    "vitest": "^4.1.2"
   },
   "engines": {
     "node": ">=22"
