@@ -28,6 +28,9 @@ gh release create "${TAG}" dist/bx.js \
   --title "${TAG}" \
   --generate-notes
 
+# Publish to npm
+npm publish --access public
+
 # Update Homebrew formula
 SHA=$(shasum -a 256 dist/bx.js | awk '{print $1}')
 
