@@ -14,6 +14,12 @@ bx ~/work/my-project
 
 That's it. 🎉 VSCode opens with full access to `~/work/my-project` and nothing else.
 
+Need multiple directories? No problem:
+
+```bash
+bx ~/work/my-project ~/work/shared-lib
+```
+
 ## ✅ What it does
 
 - 🔒 Blocks `~/Documents`, `~/Desktop`, `~/Downloads`, and all other personal folders
@@ -21,8 +27,9 @@ That's it. 🎉 VSCode opens with full access to `~/work/my-project` and nothing
 - 🛡️ Protects sensitive dotdirs like `~/.ssh`, `~/.gnupg`, `~/.docker`, `~/.cargo`
 - ⚙️ Keeps VSCode, extensions, shell, Node.js, and other tooling fully functional
 - 🔍 Generates sandbox rules dynamically based on your actual `$HOME` contents
-- 📝 Supports `.bxignore` to hide secrets like `.env` files within a project
+- 📝 Supports `.bxignore` files (searched recursively) to hide secrets like `.env` files within a project
 - 📂 Supports `~/.bxallow` to grant access to shared utility directories
+- 🗂️ Supports multiple working directories in a single sandbox
 
 ## 🚫 What it doesn't do
 
@@ -54,19 +61,22 @@ pnpm link -g
 
 | Command | What it launches |
 |---|---|
-| `bx [workdir]` | 🖥️ VSCode (default) |
-| `bx code [workdir]` | 🖥️ VSCode (explicit) |
-| `bx term [workdir]` | 💻 Sandboxed login shell (`$SHELL -l`) |
-| `bx claude [workdir]` | 🤖 Claude Code CLI |
-| `bx exec [workdir] -- cmd` | ⚡ Any command you want |
+| `bx [workdir...]` | 🖥️ VSCode (default) |
+| `bx code [workdir...]` | 🖥️ VSCode (explicit) |
+| `bx term [workdir...]` | 💻 Sandboxed login shell (`$SHELL -l`) |
+| `bx claude [workdir...]` | 🤖 Claude Code CLI |
+| `bx exec [workdir...] -- cmd` | ⚡ Any command you want |
 
-If no directory is given, the current directory is used.
+If no directory is given, the current directory is used. All modes accept multiple directories.
 
 ### Examples
 
 ```bash
 # 🖥️ VSCode with sandbox protection
 bx ~/work/my-project
+
+# 📂 Multiple working directories
+bx ~/work/my-project ~/work/shared-lib
 
 # 💻 Work on a project in a sandboxed terminal
 bx term ~/work/my-project
@@ -90,7 +100,7 @@ bx --verbose ~/work/my-project
 
 ## 📝 Configuration
 
-bx uses three optional config files — one entry per line, `#` for comments.
+bx uses three optional config files — one entry per line, `#` for comments. Project `.bxignore` files are discovered recursively.
 
 ### `~/.bxallow`
 
@@ -119,7 +129,7 @@ These are blocked **in addition** to the built-in protected list:
 
 ### `<project>/.bxignore`
 
-Block paths within the working directory. Supports glob patterns.
+Block paths within the working directory. Supports glob patterns. bx searches for `.bxignore` files **recursively** through the entire project tree (skipping `.`-prefixed dirs and `node_modules`), so you can place them in subdirectories to hide secrets close to where they live.
 
 ```gitignore
 .env
@@ -129,15 +139,25 @@ secrets/
 **/*.key
 ```
 
+For example, a monorepo might have:
+
+```text
+my-project/.bxignore          # top-level rules
+my-project/services/api/.bxignore   # API-specific secrets
+my-project/deploy/.bxignore         # deployment credentials
+```
+
+Each `.bxignore` resolves its patterns relative to its own directory.
+
 ## 🔧 How it works
 
 bx generates a macOS sandbox profile at launch time:
 
 1. **Scan** `$HOME` for non-hidden directories
 2. **Block** each one individually with `(deny file* (subpath ...))`
-3. **Skip** the working directory, `~/Library`, dotfiles, and `~/.bxallow` paths
+3. **Skip** all working directories, `~/Library`, dotfiles, and `~/.bxallow` paths
 4. **Descend** into parent directories of allowed paths to block only siblings (because SBPL deny rules always override allow rules)
-5. **Append** deny rules for protected dotdirs and `.bxignore` entries
+5. **Append** deny rules for protected dotdirs, `~/.bxignore`, and `.bxignore` files found recursively in each working directory
 6. **Write** the profile to `/tmp`, launch the app via `sandbox-exec`, clean up on exit
 
 ### Why not a simple deny-all + allow?
