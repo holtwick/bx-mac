@@ -19,9 +19,9 @@ if [ -n "$(git status --porcelain)" ]; then
   exit 1
 fi
 
-# Tag and push
-git tag "${TAG}"
-git push origin "${TAG}"
+# Tag and push (skip if tag already exists)
+git tag "${TAG}" 2>/dev/null || echo "Tag ${TAG} already exists, reusing it."
+git push origin "${TAG}" 2>/dev/null || true
 
 # Create GitHub release with bx.js attached
 gh release create "${TAG}" dist/bx.js \
