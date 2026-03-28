@@ -11,6 +11,8 @@
   ],
   "scripts": {
     "build": "rolldown -c",
+    "build:native": "bun build src/index.ts --compile --outfile dist/bx-native --define \"__VERSION__=\\\"$(node -p \"require('./package.json').version\")\\\"\"",
+    "sign": "./scripts/sign.sh",
     "test": "vitest run",
     "prepublishOnly": "npm run build",
     "post:release": "./scripts/release.sh"
