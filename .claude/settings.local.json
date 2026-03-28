@@ -1,8 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "Bash(/opt/homebrew/bin/node --version)",
-      "Bash(~/.vite-plus/bin/node --version)"
-    ]
-  }
-}

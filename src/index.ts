@@ -2,8 +2,43 @@ import { accessSync, constants, cpSync, existsSync, globSync, mkdirSync, readFil
 import { join, resolve, dirname } from "node:path"
 import { spawn } from "node:child_process"
 import { fileURLToPath } from "node:url"
+import process from "node:process"
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
+
+declare const __VERSION__: string
+const VERSION = typeof __VERSION__ !== "undefined" ? __VERSION__ : "dev"
+
+// --- --version and --help ---
+if (process.argv.includes("--version") || process.argv.includes("-v")) {
+  console.log(`bx ${VERSION}`)
+  process.exit(0)
+}
+
+if (process.argv.includes("--help") || process.argv.includes("-h")) {
+  console.log(`bx ${VERSION} — launch apps in a macOS sandbox
+
+Usage:
+  bx [workdir]                            VSCode (default)
+  bx code [workdir]                       VSCode
+  bx term [workdir]                       sandboxed login shell
+  bx claude [workdir]                     Claude Code CLI
+  bx exec [workdir] -- command [args...]  arbitrary command
+
+Options:
+  --verbose            print the generated sandbox profile
+  --profile-sandbox    use an isolated VSCode profile (code mode only)
+  -v, --version        show version
+  -h, --help           show this help
+
+Configuration:
+  ~/.bxallow           extra allowed directories (one per line)
+  ~/.bxignore          extra blocked paths in $HOME (one per line)
+  <workdir>/.bxignore  blocked paths in project (supports globs)
+
+https://github.com/holtwick/bx-mac`)
+  process.exit(0)
+}
 
 // Guard: detect if launched from inside a sandboxed VSCode instance
 if (process.env.CODEBOX_SANDBOX === "1") {
@@ -259,7 +294,7 @@ const child = spawn("sandbox-exec", [
   env: { ...process.env, CODEBOX_SANDBOX: "1" },
 })
 
-child.on("close", (code) => {
+child.on("close", (code: any) => {
   rmSync(profilePath, { force: true })
   process.exit(code ?? 0)
 })
