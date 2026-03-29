@@ -18,33 +18,36 @@
   args = [
     "--no-sandbox",
   ]
+  # workdirs = ["~/work/project-a", "~/work/shared-lib"]
 
 [apps.xcode]
   bundle = "com.apple.dt.Xcode"
   binary = "Contents/MacOS/Xcode"
   fallback = "/Applications/Xcode.app/Contents/MacOS/Xcode"
   passWorkdirs = false
+  # workdirs = ["~/work/my-ios-app"]
 
-  # --- Finding bundle IDs ---
-  # Run: osascript -e 'id of app "AppName"'
-  # Using bundle IDs is recommended over paths — they survive app updates,
-  # relocations, and name changes.
+# --- Finding bundle IDs ---
+# Run: osascript -e 'id of app "AppName"'
+# Using bundle IDs is recommended over paths — they survive app updates,
+# relocations, and name changes.
 
-  # --- Examples for additional apps ---
+# --- Examples for additional apps ---
 
-  # [apps.cursor]
-  # bundle = "com.todesktop.230313mzl4w4u92"
-  # binary = "Contents/MacOS/Cursor"
-  # args = ["--no-sandbox"]
-  # passWorkdirs = true
+# [apps.cursor]
+# bundle = "com.todesktop.230313mzl4w4u92"
+# binary = "Contents/MacOS/Cursor"
+# args = ["--no-sandbox"]
+# passWorkdirs = true
+# workdirs = ["~/work/project-b"]
 
-  # [apps.zed]
-  # bundle = "dev.zed.Zed"
-  # binary = "Contents/MacOS/zed"
+# [apps.zed]
+# bundle = "dev.zed.Zed"
+# binary = "Contents/MacOS/zed"
 
-  # [apps.fleet]
-  # path = "/Applications/Fleet.app/Contents/MacOS/Fleet"
+# [apps.fleet]
+# path = "/Applications/Fleet.app/Contents/MacOS/Fleet"
 
-  # [apps.sublime]
-  # bundle = "com.sublimetext.4"
-  # binary = "Contents/MacOS/sublime_text"
+# [apps.sublime]
+# bundle = "com.sublimetext.4"
+# binary = "Contents/MacOS/sublime_text"

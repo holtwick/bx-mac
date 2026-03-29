@@ -44,9 +44,13 @@ async function main() {
   const apps = getAvailableApps(config)
   const validModes = getValidModes(apps)
   const { mode, workArgs, verbose, dry, profileSandbox, appArgs, implicit } = parseArgs(validModes)
-  const workDirs = workArgs.map((a) => resolve(a))
 
-  if (implicit && !dry) {
+  // Use preconfigured workdirs from config if none given on CLI
+  const app = apps[mode]
+  const effectiveWorkArgs = implicit && app?.workdirs?.length ? app.workdirs : workArgs
+  const workDirs = effectiveWorkArgs.map((a) => resolve(a.replace(/^~\//, HOME + "/")))
+
+  if (implicit && !app?.workdirs?.length && !dry) {
     await confirmLaunch(workDirs[0], mode)
   }
 

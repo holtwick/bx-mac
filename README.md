@@ -37,6 +37,7 @@ bx ~/work/my-project ~/work/shared-lib
 - **No process isolation** — this is file-level sandboxing, not a container
 - **No protection against root/sudo** — the sandbox applies to the user-level process
 - **macOS only** — relies on `sandbox-exec` (Apple-specific)
+- **Not dynamic** — the sandbox profile is a snapshot of `$HOME` at launch time; directories or files created later are **not** automatically blocked
 - **Not a vault** — `sandbox-exec` is undocumented; treat this as a safety net, not a guarantee
 
 ## 📥 Install
@@ -154,10 +155,20 @@ path = "/usr/local/bin/code"
 | `fallback` | Absolute fallback path if `mdfind` discovery fails |
 | `args` | Extra arguments always passed to the app |
 | `passWorkdirs` | Whether `workdir...` is forwarded as app launch args (`true`/`false`) |
+| `workdirs` | Default working directories when none are given on the CLI (supports `~/` paths) |
 
 **Resolution order:** `path` → `mdfind` by `bundle` + `binary` → `fallback`
 
 `passWorkdirs` controls launch argument behavior and is independent of sandbox scope. Even with `passWorkdirs = false`, the provided `workdir...` still defines what the sandbox can access.
+
+**Preconfigured workdirs** let you define your usual environment per app:
+
+```toml
+[apps.code]
+workdirs = ["~/work/my-project", "~/work/shared-lib"]
+```
+
+Running `bx code` (without arguments) will then open VSCode with both directories sandboxed. CLI arguments always override configured workdirs.
 
 When overriding a built-in app, only the specified fields are replaced — unset fields keep their defaults. See [`bxconfig.example.toml`](bxconfig.example.toml) for a complete reference.
 
@@ -254,6 +265,26 @@ bx detects and prevents problematic scenarios:
 - **🔍 Unknown sandbox:** On startup, bx probes `~/Documents`, `~/Desktop`, `~/Downloads`. If any return `EPERM`, another sandbox is active — bx aborts.
 - **⚠️ VSCode terminal:** If `VSCODE_PID` is set, bx warns that it will launch a *new* instance, not sandbox the current one.
 - **🧩 App already sandboxed:** For GUI app modes, bx inspects app entitlements (best effort) and warns if Apple App Sandbox is enabled, since nested sandboxing can cause startup/access issues.
+- **🔁 App already running:** If the target app is already running, bx warns that the new workspace would open in the existing (unsandboxed) instance and asks for confirmation. This is important because Electron apps like VSCode, Cursor, etc. always reuse the running process — `sandbox-exec` has no effect on the already-running instance.
+
+### Single-instance apps
+
+Most GUI editors (VSCode, Cursor, Xcode, Zed) are **single-instance apps** — launching them a second time just sends the path to the running process. This means you **cannot run two separately sandboxed instances** of the same app.
+
+**To work on multiple projects**, specify all directories at launch:
+
+```bash
+bx code ~/work/project-a ~/work/project-b
+```
+
+Or preconfigure them in `~/.bxconfig.toml`:
+
+```toml
+[apps.code]
+workdirs = ["~/work/project-a", "~/work/project-b"]
+```
+
+For VSCode specifically, `--profile-sandbox` forces a separate Electron process via an isolated `--user-data-dir`, but this means separate extensions and settings.
 
 ## 💡 Tips
 
@@ -268,6 +299,7 @@ cat ./src/index.ts               # ✅ Works!
 
 ## ⚠️ Known limitations
 
+- **⚠️ Sandbox profile is static:** The sandbox rules are generated **once at launch** by scanning the current state of `$HOME`. Directories or files created **after** the sandbox starts are **not protected** — for example, if a tool creates `~/new-project/` while the sandbox is running, that directory will be fully accessible. Similarly, project-level `.bxignore` patterns only match files that exist at launch time; files matching a blocked pattern (e.g. `.env`) that are created later will **not** be denied. Re-run `bx` to pick up changes.
 - **File watcher warnings:** VSCode may log `EPERM` for `fs.watch()` on some paths — cosmetic only
 - **SQLite warnings:** `state.vscdb` errors may appear in logs — extensions still work
 - **`sandbox-exec` is undocumented:** Apple could change behavior with OS updates

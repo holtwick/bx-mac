@@ -16,6 +16,8 @@ export interface AppDefinition {
   args?: string[]
   /** Whether to pass workdirs as launch arguments (default: true, xcode: false) */
   passWorkdirs?: boolean
+  /** Preconfigured working directories (used when none given on CLI) */
+  workdirs?: string[]
 }
 
 /** Built-in app definitions — always available, can be overridden via config */
@@ -62,6 +64,7 @@ export function loadConfig(home: string): BxConfig {
           fallback: typeof def.fallback === "string" ? def.fallback : undefined,
           args: Array.isArray(def.args) ? def.args.filter((a): a is string => typeof a === "string") : undefined,
           passWorkdirs: typeof def.passWorkdirs === "boolean" ? def.passWorkdirs : undefined,
+          workdirs: Array.isArray(def.workdirs) ? def.workdirs.filter((a): a is string => typeof a === "string") : undefined,
         }
       }
     }
