@@ -11,6 +11,7 @@ import { setupVSCodeProfile, buildCommand, bringAppToFront, getActivationCommand
 import { loadConfig, getAvailableApps, getValidModes } from "./config.js"
 import { printHelp } from "./help.js"
 import { printDryRunTree } from "./drytree.js"
+import { fmt } from "./fmt.js"
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 
@@ -32,7 +33,7 @@ if (process.argv.includes("--help") || process.argv.includes("-h")) {
 // --- Require $HOME ---
 
 if (!process.env.HOME) {
-  console.error("sandbox: ERROR — $HOME environment variable is not set. Aborting.")
+  console.error(`\n${fmt.error("$HOME environment variable is not set")}\n`)
   process.exit(1)
 }
 const HOME: string = process.env.HOME
@@ -52,11 +53,11 @@ async function main() {
 
   if (implicit && !app?.workdirs?.length) {
     if (workDirs.some((d) => d === HOME)) {
-      console.error(`\n🚫 ${CYAN}bx${RESET} · no working directory specified and current directory is $HOME\n`)
-      console.error(`   ${DIM}Usage:${RESET}  bx ${mode} <workdir>`)
-      console.error(`   ${DIM}Config:${RESET} set default workdirs in ~/.bxconfig.toml:\n`)
-      console.error(`   ${DIM}[apps.${mode}]${RESET}`)
-      console.error(`   ${DIM}workdirs = ["~/work/my-project"]${RESET}\n`)
+      console.error(`\n${fmt.error("no working directory specified and current directory is $HOME")}\n`)
+      console.error(fmt.detail(`Usage:  bx ${mode} <workdir>`))
+      console.error(fmt.detail(`Config: set default workdirs in ~/.bxconfig.toml:\n`))
+      console.error(fmt.detail(`[apps.${mode}]`))
+      console.error(fmt.detail(`workdirs = ["~/work/my-project"]\n`))
       process.exit(1)
     }
     if (!dry) {
@@ -108,7 +109,7 @@ async function main() {
 
   const nestedSandboxWarning = getNestedSandboxWarning(mode, apps)
   if (nestedSandboxWarning) {
-    console.error(`   ⚠️  ${nestedSandboxWarning}`)
+    console.error(fmt.detail(nestedSandboxWarning))
   }
 
   if (verbose) {
@@ -137,17 +138,13 @@ async function main() {
   })
 }
 
-// ANSI helpers
-const DIM = "\x1b[2m"
-const RESET = "\x1b[0m"
-const CYAN = "\x1b[36m"
 
 // --- Helpers ---
 
 async function confirmLaunch(workDir: string, mode: string) {
   const rl = createInterface({ input: process.stdin, output: process.stderr })
   const answer = await new Promise<string>((res) => {
-    rl.question(`🔒 Open ${workDir} in ${mode}? [Y/n] `, res)
+    rl.question(`${fmt.info(`open ${workDir} in ${mode}?`)} [Y/n] `, res)
   })
   rl.close()
   if (answer && !answer.match(/^y(es)?$/i)) {
@@ -163,7 +160,7 @@ function printPolicySummary(
   readOnly: Set<string>,
 ) {
   const dirLabel = workDirs.length === 1 ? workDirs[0] : `${workDirs.length} directories`
-  console.error(`\n🔒 ${CYAN}bx${RESET} · ${mode} → ${dirLabel}`)
+  console.error(`\n${fmt.info(`${mode} → ${dirLabel}`)}`)
 
   const parts: string[] = [
     `${blockedDirs.length} blocked`,
@@ -176,7 +173,7 @@ function printPolicySummary(
   if (extraIgnored > 0) {
     parts.push(`${extraIgnored} from .bxignore`)
   }
-  console.error(`   ${DIM}${parts.join(" · ")}${RESET}`)
+  console.error(fmt.detail(parts.join(" · ")))
 }
 
 function printLaunchDetails(
@@ -185,11 +182,11 @@ function printLaunchDetails(
   activationCmd: { bin: string; args: string[] } | null,
 ) {
   const quote = (a: string) => JSON.stringify(a)
-  console.error(`   ${DIM}bin:  ${cmd.bin}${RESET}`)
-  console.error(`   ${DIM}args: ${cmd.args.map(quote).join(" ") || "(none)"}${RESET}`)
-  console.error(`   ${DIM}cwd:  ${cwd}${RESET}`)
+  console.error(fmt.detail(`bin:  ${cmd.bin}`))
+  console.error(fmt.detail(`args: ${cmd.args.map(quote).join(" ") || "(none)"}`))
+  console.error(fmt.detail(`cwd:  ${cwd}`))
   if (activationCmd) {
-    console.error(`   ${DIM}focus: ${activationCmd.bin} ${activationCmd.args.map(quote).join(" ")}${RESET}`)
+    console.error(fmt.detail(`focus: ${activationCmd.bin} ${activationCmd.args.map(quote).join(" ")}`))
   }
 }
 

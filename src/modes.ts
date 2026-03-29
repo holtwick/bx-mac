@@ -4,6 +4,7 @@ import { spawn, execFileSync } from "node:child_process"
 import process from "node:process"
 import type { AppDefinition } from "./config.js"
 import { resolveAppPath, BUILTIN_MODES, type BuiltinMode } from "./config.js"
+import { fmt } from "./fmt.js"
 
 export interface Command {
   bin: string
@@ -61,7 +62,7 @@ export function setupVSCodeProfile(home: string) {
 
   mkdirSync(dataDir, { recursive: true })
   if (!existsSync(localExt) && existsSync(globalExt)) {
-    console.error("sandbox: copying extensions from global install...")
+    console.error(fmt.detail("copying extensions from global install..."))
     cpSync(globalExt, localExt, { recursive: true })
   }
 }
@@ -101,15 +102,15 @@ function buildAppCommand(
 ): Command {
   const app = apps[mode]
   if (!app) {
-    console.error(`sandbox: unknown mode "${mode}"`)
+    console.error(`\n${fmt.error(`unknown mode "${mode}"`)}\n`)
     process.exit(1)
   }
 
   const resolvedPath = resolveAppPath(app)
   if (!resolvedPath) {
-    console.error(`sandbox: could not find application for "${mode}"`)
-    if (app.bundle) console.error(`  bundle: ${app.bundle}`)
-    console.error("  hint: set an explicit path in ~/.bxconfig.toml")
+    console.error(`\n${fmt.error(`could not find application for "${mode}"`)}`)
+    if (app.bundle) console.error(fmt.detail(`bundle: ${app.bundle}`))
+    console.error(fmt.detail("hint: set an explicit path in ~/.bxconfig.toml\n"))
     process.exit(1)
   }
 
@@ -166,7 +167,7 @@ export function getNestedSandboxWarning(mode: string, apps: Record<string, AppDe
     })
 
     if (hasAppSandboxEntitlement(entitlements)) {
-      return `sandbox: warning: app "${mode}" appears to have Apple App Sandbox enabled; nested sandboxing may cause startup/access issues`
+      return `⚠️  "${mode}" has Apple App Sandbox enabled — nested sandboxing may cause issues`
     }
   } catch {
     // Ignore: unsigned apps, stripped metadata, missing tools

@@ -5,14 +5,15 @@ import { createInterface } from "node:readline"
 import process from "node:process"
 import type { AppDefinition } from "./config.js"
 import { BUILTIN_MODES } from "./config.js"
+import { fmt } from "./fmt.js"
 
 /**
  * Abort if we're already inside a bx sandbox (env var set by us).
  */
 export function checkOwnSandbox() {
   if (process.env.CODEBOX_SANDBOX === "1") {
-    console.error("sandbox: ERROR — already running inside a bx sandbox.")
-    console.error("sandbox: Nesting sandbox-exec causes silent failures. Aborting.")
+    console.error(`\n${fmt.error("already running inside a bx sandbox")}`)
+    console.error(fmt.detail("nesting sandbox-exec causes silent failures\n"))
     process.exit(1)
   }
 }
@@ -22,9 +23,9 @@ export function checkOwnSandbox() {
  */
 export function checkVSCodeTerminal() {
   if (process.env.VSCODE_PID) {
-    console.error("sandbox: WARNING — running from inside a VSCode terminal.")
-    console.error("sandbox: This will launch a *new* instance in a sandbox.")
-    console.error("sandbox: The current VSCode instance will NOT be sandboxed.")
+    console.error(`\n${fmt.warn("running from inside a VSCode terminal")}`)
+    console.error(fmt.detail("this will launch a *new* instance in a sandbox"))
+    console.error(fmt.detail("the current VSCode instance will NOT be sandboxed"))
   }
 }
 
@@ -34,13 +35,13 @@ export function checkVSCodeTerminal() {
 export function checkWorkDirs(workDirs: string[], home: string) {
   for (const dir of workDirs) {
     if (dir === home) {
-      console.error("sandbox: ERROR — working directory cannot be $HOME itself.")
-      console.error("sandbox: Sandboxing your entire home directory is not supported. Aborting.")
+      console.error(`\n${fmt.error("working directory cannot be $HOME itself")}`)
+      console.error(fmt.detail("sandboxing your entire home directory is not supported\n"))
       process.exit(1)
     }
     if (!dir.startsWith(home + "/")) {
-      console.error(`sandbox: ERROR — working directory is outside $HOME: ${dir}`)
-      console.error("sandbox: Only directories inside $HOME are supported. Aborting.")
+      console.error(`\n${fmt.error(`working directory is outside $HOME: ${dir}`)}`)
+      console.error(fmt.detail("only directories inside $HOME are supported\n"))
       process.exit(1)
     }
   }
@@ -70,17 +71,17 @@ export async function checkAppAlreadyRunning(mode: string, apps: Record<string, 
 
   if (!running) return
 
-  console.error(`\n   ⚠️  "${mode}" is already running.`)
-  console.error(`      The workspace will open in the EXISTING instance — sandbox restrictions will NOT apply.`)
+  console.error(`\n${fmt.warn(`"${mode}" is already running`)}`)
+  console.error(fmt.detail("the workspace will open in the EXISTING instance — sandbox will NOT apply"))
   if (mode === "code") {
-    console.error(`      Quit the app first, or use --profile-sandbox for an isolated instance.`)
+    console.error(fmt.detail("quit the app first, or use --profile-sandbox for an isolated instance"))
   } else {
-    console.error(`      Quit the app first to ensure sandbox protection.`)
+    console.error(fmt.detail("quit the app first to ensure sandbox protection"))
   }
 
   const rl = createInterface({ input: process.stdin, output: process.stderr })
   const answer = await new Promise<string>((res) => {
-    rl.question("      Continue without sandbox? [y/N] ", res)
+    rl.question(`   continue without sandbox? [y/N] `, res)
   })
   rl.close()
 
@@ -101,8 +102,8 @@ export function checkExternalSandbox() {
       accessSync(target, constants.R_OK)
     } catch (e: any) {
       if (e.code === "EPERM") {
-        console.error("sandbox: ERROR — already running inside a sandbox!")
-        console.error("sandbox: Nesting sandbox-exec may cause silent failures. Aborting.")
+        console.error(`\n${fmt.error("already running inside a sandbox")}`)
+        console.error(fmt.detail("nesting sandbox-exec may cause silent failures\n"))
         process.exit(1)
       }
     }

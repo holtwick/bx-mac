@@ -2,6 +2,7 @@ import { readFileSync, existsSync } from "node:fs"
 import { execFileSync } from "node:child_process"
 import { join } from "node:path"
 import { parse as parseToml } from "smol-toml"
+import { fmt } from "./fmt.js"
 
 export interface AppDefinition {
   /** macOS bundle identifier for mdfind discovery */
@@ -71,7 +72,7 @@ export function loadConfig(home: string): BxConfig {
 
     return { apps }
   } catch (err) {
-    console.error(`sandbox: warning: failed to parse ${configPath}: ${err instanceof Error ? err.message : err}`)
+    console.error(`\n${fmt.warn(`failed to parse ${configPath}: ${err instanceof Error ? err.message : err}`)}`)
     return { apps: {} }
   }
 }
@@ -121,7 +122,7 @@ export function resolveAppPath(app: AppDefinition): string | null {
   // 1. Explicit path override
   if (app.path) {
     if (existsSync(app.path)) return app.path
-    console.error(`sandbox: warning: configured path not found: ${app.path}`)
+    console.error(`\n${fmt.warn(`configured path not found: ${app.path}`)}`)
   }
 
   // 2. Auto-discovery via mdfind

@@ -1,4 +1,5 @@
 import process from "node:process"
+import { fmt } from "./fmt.js"
 
 export interface Args {
   mode: string
@@ -47,8 +48,8 @@ export function parseArgs(validModes: string[]): Args {
   }
 
   if (mode === "exec" && appArgs.length === 0) {
-    console.error("sandbox: exec mode requires a command after \"--\"")
-    console.error("usage: bx exec [workdir...] -- command [args...]")
+    console.error(`\n${fmt.error("exec mode requires a command after \"--\"")}`)
+    console.error(fmt.detail("usage: bx exec [workdir...] -- command [args...]\n"))
     process.exit(1)
   }
 

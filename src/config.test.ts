@@ -61,7 +61,7 @@ path = "/Applications/Zed.app/Contents/MacOS/zed"
     const spy = vi.spyOn(console, "error").mockImplementation(() => {})
     const config = loadConfig("/Users/test")
     expect(config.apps).toEqual({})
-    expect(spy).toHaveBeenCalledWith(expect.stringContaining("warning"))
+    expect(spy).toHaveBeenCalledWith(expect.stringContaining("failed to parse"))
     spy.mockRestore()
   })
 
