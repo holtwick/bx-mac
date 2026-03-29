@@ -10,6 +10,7 @@ const testApps: Record<string, AppDefinition> = {
   code: { ...BUILTIN_APPS.code, path: "/test/VSCode/Electron" },
   xcode: { ...BUILTIN_APPS.xcode, path: "/test/Xcode" },
   custom: { path: "/test/CustomApp", args: ["--flag"] },
+  gram: { path: "/Applications/Gram.app" },
 }
 
 // Mock resolveAppPath to return the explicit path directly
@@ -74,6 +75,11 @@ describe("buildCommand", () => {
     expect(cmd.args).toContain("--flag")
     expect(cmd.args).toContain("/work/a")
   })
+
+  it("normalizes .app path to executable for custom app", () => {
+    const cmd = buildCommand("gram", ["/work/a"], home, false, [], testApps)
+    expect(cmd.bin).toBe("/Applications/Gram.app/Contents/MacOS/Gram")
+  })
 })
 
 describe("getActivationCommand", () => {
@@ -87,5 +93,13 @@ describe("getActivationCommand", () => {
 
   it("returns null for builtin shell modes", () => {
     expect(getActivationCommand("term", testApps)).toBeNull()
+  })
+
+  it("returns open -a for custom app configured as .app path", () => {
+    const cmd = getActivationCommand("gram", testApps)
+    expect(cmd).toEqual({
+      bin: "/usr/bin/open",
+      args: ["-a", "/Applications/Gram.app"],
+    })
   })
 })

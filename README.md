@@ -146,7 +146,7 @@ path = "/usr/local/bin/code"
 | --- | --- |
 | `bundle` | macOS bundle identifier — used with `mdfind` to find the app automatically |
 | `binary` | Relative path to the executable inside the `.app` bundle |
-| `path` | Absolute path to the executable (highest priority, skips discovery) |
+| `path` | Absolute path to the executable **or** `.app` bundle (highest priority, skips discovery) |
 | `fallback` | Absolute fallback path if `mdfind` discovery fails |
 | `args` | Extra arguments always passed to the app |
 

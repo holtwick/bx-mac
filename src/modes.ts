@@ -1,5 +1,5 @@
 import { cpSync, existsSync, mkdirSync } from "node:fs"
-import { join } from "node:path"
+import { join, basename } from "node:path"
 import { spawn } from "node:child_process"
 import process from "node:process"
 import type { AppDefinition } from "./config.js"
@@ -11,10 +11,20 @@ interface Command {
 }
 
 function appBundleFromExecutablePath(path: string): string | null {
+  if (path.endsWith(".app")) return path
+
   const marker = ".app/"
   const idx = path.indexOf(marker)
   if (idx < 0) return null
   return path.slice(0, idx + ".app".length)
+}
+
+function executablePathFromAppBundle(path: string, app: AppDefinition): string {
+  if (!path.endsWith(".app")) return path
+  if (app.binary) return join(path, app.binary)
+
+  const appName = basename(path, ".app")
+  return join(path, "Contents", "MacOS", appName)
 }
 
 /**
@@ -66,13 +76,15 @@ export function buildCommand(
     process.exit(1)
   }
 
-  const bin = resolveAppPath(app)
-  if (!bin) {
+  const resolvedPath = resolveAppPath(app)
+  if (!resolvedPath) {
     console.error(`sandbox: could not find application for "${mode}"`)
     if (app.bundle) console.error(`  bundle: ${app.bundle}`)
     console.error("  hint: set an explicit path in ~/.bxconfig.toml")
     process.exit(1)
   }
+
+  const bin = executablePathFromAppBundle(resolvedPath, app)
 
   const args: string[] = []
 
