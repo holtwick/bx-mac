@@ -1,7 +1,7 @@
 {
   "name": "bx-mac",
   "version": "0.8.2",
-  "description": "Launch apps in a macOS sandbox — only the project directory is accessible",
+  "description": "Sandbox any macOS app — only your project directory stays accessible",
   "type": "module",
   "bin": {
     "bx": "dist/bx.js"
@@ -22,8 +22,13 @@
     "sandbox",
     "macos",
     "security",
+    "privacy",
+    "cli",
+    "developer-tools",
     "vscode",
-    "claude"
+    "xcode",
+    "claude-code",
+    "terminal"
   ],
   "author": "Dirk Holtwick",
   "license": "MIT",
