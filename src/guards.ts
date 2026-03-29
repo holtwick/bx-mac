@@ -5,6 +5,7 @@ import { createInterface } from "node:readline"
 import process from "node:process"
 import type { AppDefinition } from "./config.js"
 import { BUILTIN_MODES } from "./config.js"
+import { isSelfProtected } from "./profile.js"
 import { fmt } from "./fmt.js"
 
 /**
@@ -42,6 +43,11 @@ export function checkWorkDirs(workDirs: string[], home: string) {
     if (!dir.startsWith(home + "/")) {
       console.error(`\n${fmt.error(`working directory is outside $HOME: ${dir}`)}`)
       console.error(fmt.detail("only directories inside $HOME are supported\n"))
+      process.exit(1)
+    }
+    if (isSelfProtected(dir)) {
+      console.error(`\n${fmt.error(`working directory is self-protected: ${dir}`)}`)
+      console.error(fmt.detail("remove .bxprotect or '/' from .bxignore to allow access\n"))
       process.exit(1)
     }
   }

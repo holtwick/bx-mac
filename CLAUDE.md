@@ -97,6 +97,8 @@ ro:reference/docs
 ro:shared/toolchain
 ```
 
+**`<dir>/.bxprotect`** — Marker file (can be empty). When present in a directory, that directory is completely blocked. If placed in a workdir, `bx` refuses to launch. Useful for protecting sensitive project directories without editing `~/.bxignore`.
+
 **`<workdir>/.bxignore`** — Block paths within the project (supports globs, `.gitignore`-style matching):
 
 ```gitignore
@@ -113,6 +115,10 @@ config/secrets    # blocks <workdir>/config/secrets, not sub/config/secrets
 
 # Trailing "/" marks directories (does not affect matching scope)
 secrets/          # blocks secrets/ directories at any depth
+
+# Self-protect: a bare "/" or "." blocks the entire containing directory
+/                 # makes this directory (and all contents) inaccessible
+.                 # same effect — shorthand alternative
 ```
 
 ### Built-in protected dotdirs

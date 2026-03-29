@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest"
 import { mkdirSync, rmSync, writeFileSync } from "node:fs"
 import { join } from "node:path"
-import { collectBlockedDirs, collectIgnoredPaths, generateProfile, parseHomeConfig, PROTECTED_DOTDIRS } from "./profile.js"
+import { collectBlockedDirs, collectIgnoredPaths, generateProfile, isSelfProtected, parseHomeConfig, PROTECTED_DOTDIRS } from "./profile.js"
 
 describe("PROTECTED_DOTDIRS", () => {
   it("includes essential sensitive directories", () => {
@@ -137,6 +137,55 @@ describe("parseHomeConfig", () => {
   })
 })
 
+describe("isSelfProtected", () => {
+  const tmpBase = join("/tmp", `bx-test-selfprotect-${process.pid}`)
+
+  afterEach(() => {
+    rmSync(tmpBase, { recursive: true, force: true })
+  })
+
+  it("returns true when .bxprotect exists", () => {
+    const dir = join(tmpBase, "protected")
+    mkdirSync(dir, { recursive: true })
+    writeFileSync(join(dir, ".bxprotect"), "")
+    expect(isSelfProtected(dir)).toBe(true)
+  })
+
+  it("returns true when .bxignore contains /", () => {
+    const dir = join(tmpBase, "protected")
+    mkdirSync(dir, { recursive: true })
+    writeFileSync(join(dir, ".bxignore"), "/\n")
+    expect(isSelfProtected(dir)).toBe(true)
+  })
+
+  it("returns true when .bxignore contains / among other entries", () => {
+    const dir = join(tmpBase, "protected")
+    mkdirSync(dir, { recursive: true })
+    writeFileSync(join(dir, ".bxignore"), ".env\n/\n*.pem\n")
+    expect(isSelfProtected(dir)).toBe(true)
+  })
+
+  it("returns true when .bxignore contains .", () => {
+    const dir = join(tmpBase, "protected")
+    mkdirSync(dir, { recursive: true })
+    writeFileSync(join(dir, ".bxignore"), ".\n")
+    expect(isSelfProtected(dir)).toBe(true)
+  })
+
+  it("returns false for regular .bxignore without /", () => {
+    const dir = join(tmpBase, "normal")
+    mkdirSync(dir, { recursive: true })
+    writeFileSync(join(dir, ".bxignore"), ".env\n*.pem\n")
+    expect(isSelfProtected(dir)).toBe(false)
+  })
+
+  it("returns false when no marker files exist", () => {
+    const dir = join(tmpBase, "empty")
+    mkdirSync(dir, { recursive: true })
+    expect(isSelfProtected(dir)).toBe(false)
+  })
+})
+
 describe("collectIgnoredPaths", () => {
   const tmpBase = join("/tmp", `bx-test-ignore-${process.pid}`)
   const home = join(tmpBase, "home")
@@ -232,6 +281,37 @@ describe("collectIgnoredPaths", () => {
 
     const ignored = collectIgnoredPaths(home, [workDir])
     expect(ignored).toContain(join(workDir, "sub", "deep", "test.pem"))
+  })
+
+  it("blocks subdirectory with .bxprotect", () => {
+    const secret = join(workDir, "sub", "secret")
+    mkdirSync(secret, { recursive: true })
+    writeFileSync(join(secret, ".bxprotect"), "")
+
+    const ignored = collectIgnoredPaths(home, [workDir])
+    expect(ignored).toContain(secret)
+  })
+
+  it("blocks subdirectory with / in .bxignore", () => {
+    const secret = join(workDir, "sub", "secret")
+    mkdirSync(secret, { recursive: true })
+    writeFileSync(join(secret, ".bxignore"), "/\n")
+
+    const ignored = collectIgnoredPaths(home, [workDir])
+    expect(ignored).toContain(secret)
+  })
+
+  it("does not recurse into self-protected subdirectories", () => {
+    const secret = join(workDir, "sub", "secret")
+    mkdirSync(join(secret, "nested"), { recursive: true })
+    writeFileSync(join(secret, ".bxprotect"), "")
+    writeFileSync(join(secret, "nested", ".bxignore"), ".env\n")
+    writeFileSync(join(secret, "nested", ".env"), "KEY=1")
+
+    const ignored = collectIgnoredPaths(home, [workDir])
+    // The whole directory is blocked, but nested .env should not appear separately
+    expect(ignored).toContain(secret)
+    expect(ignored).not.toContain(join(secret, "nested", ".env"))
   })
 })
 

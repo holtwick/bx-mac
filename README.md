@@ -236,6 +236,33 @@ my-project/deploy/.bxignore         # deployment credentials
 
 Each `.bxignore` resolves its patterns relative to its own directory.
 
+### Self-protecting directories
+
+You can make any directory protect itself — no global configuration needed. There are two ways:
+
+**Option 1: `.bxignore` with `/` or `.`**
+
+Create a `.bxignore` file containing a bare `/` or `.`:
+
+```gitignore
+.
+```
+
+This blocks the entire directory and everything inside it. You can combine it with other patterns (they become redundant since the whole directory is blocked).
+
+**Option 2: `.bxprotect` marker file**
+
+Create an empty `.bxprotect` file:
+
+```bash
+touch ~/work/secret-project/.bxprotect
+```
+
+Both methods have the same effect:
+
+- **Inside a workdir:** If a subdirectory is self-protected, it is completely blocked (deny) and bx does not recurse into it.
+- **As a workdir:** If you try to open a self-protected directory with `bx`, it refuses to launch with a clear error message.
+
 ## 🔧 How it works
 
 bx generates a macOS sandbox profile at launch time:

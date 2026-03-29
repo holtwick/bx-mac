@@ -44,15 +44,34 @@ function resolveGlobMatches(pattern: string, baseDir: string): string[] {
     .map((match) => resolve(baseDir, match))
 }
 
+// --- Self-protection detection ---
+
+/**
+ * A directory is self-protected if it contains a `.bxprotect` file
+ * or a `.bxignore` with a bare `/` entry.  Self-protected directories
+ * are blocked entirely — they cannot be used as workdirs and are
+ * denied inside workdir trees.
+ */
+export function isSelfProtected(dir: string): boolean {
+  if (existsSync(join(dir, ".bxprotect"))) return true
+  return parseLines(join(dir, ".bxignore")).some((l) => l === "/" || l === ".")
+}
+
 // --- Ignore file collection ---
 
 function applyIgnoreFile(filePath: string, baseDir: string, ignored: string[]) {
   for (const line of parseLines(filePath)) {
+    if (line === "/" || line === ".") continue // handled by isSelfProtected
     ignored.push(...resolveGlobMatches(line, baseDir))
   }
 }
 
 function collectIgnoreFilesRecursive(dir: string, ignored: string[]) {
+  if (isSelfProtected(dir)) {
+    ignored.push(dir)
+    return
+  }
+
   const ignoreFile = join(dir, ".bxignore")
   if (existsSync(ignoreFile)) {
     applyIgnoreFile(ignoreFile, dir, ignored)

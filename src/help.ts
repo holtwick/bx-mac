@@ -58,5 +58,7 @@ Configuration:
                          rw:path      allow read-write access
                          ro:path      allow read-only access
   <workdir>/.bxignore  blocked paths in project (.gitignore-style matching)
+                         / or .         self-protect: block entire directory
+  <dir>/.bxprotect     marker file: block the containing directory
 
 https://github.com/holtwick/bx-mac`
