@@ -12,9 +12,8 @@ export const PROTECTED_DOTDIRS = [
   ".gem",
 ]
 
-/**
- * Parse a config file with one entry per line (supports # comments).
- */
+// --- Line / file parsing helpers ---
+
 function parseLines(filePath: string): string[] {
   if (!existsSync(filePath)) return []
   return readFileSync(filePath, "utf-8")
@@ -24,40 +23,35 @@ function parseLines(filePath: string): string[] {
 }
 
 /**
- * Convert a .bxignore line to a glob pattern following .gitignore semantics:
- * - Leading "/" anchors to the base dir (stripped before globbing)
- * - Patterns without "/" (except trailing) match recursively via ** / prefix
- * - Patterns with "/" (non-leading, non-trailing) are relative to baseDir
- * - Trailing "/" marks directories only and doesn't count as path separator
+ * Convert a .bxignore line to a glob pattern (.gitignore semantics):
+ *
+ *   "/foo"       → anchored to base dir       → "foo"
+ *   "foo/bar"    → relative path, use as-is    → "foo/bar"
+ *   "foo"        → no slash, match recursively → "** /foo"
+ *   "secrets/"   → trailing slash = dir marker, still recursive
  */
 function toGlobPattern(line: string): string {
-  // Leading "/" → anchored to base dir, use as-is (strip the slash)
   if (line.startsWith("/")) return line.slice(1)
 
-  // Strip trailing "/" (directory marker) for the slash check
-  const stripped = line.endsWith("/") ? line.slice(0, -1) : line
+  const withoutTrailingSlash = line.endsWith("/") ? line.slice(0, -1) : line
+  if (withoutTrailingSlash.includes("/")) return line
 
-  // Contains "/" → already a relative path, use as-is
-  if (stripped.includes("/")) return line
-
-  // No slash → match anywhere in the tree
   return `**/${line}`
 }
 
-/**
- * Apply a single .bxignore file: resolve glob patterns relative to baseDir.
- */
+function resolveGlobMatches(pattern: string, baseDir: string): string[] {
+  return globSync(toGlobPattern(pattern), { cwd: baseDir })
+    .map((match) => resolve(baseDir, match))
+}
+
+// --- Ignore file collection ---
+
 function applyIgnoreFile(filePath: string, baseDir: string, ignored: string[]) {
   for (const line of parseLines(filePath)) {
-    for (const match of globSync(toGlobPattern(line), { cwd: baseDir })) {
-      ignored.push(resolve(baseDir, match))
-    }
+    ignored.push(...resolveGlobMatches(line, baseDir))
   }
 }
 
-/**
- * Recursively find and apply .bxignore files in a directory tree.
- */
 function collectIgnoreFilesRecursive(dir: string, ignored: string[]) {
   const ignoreFile = join(dir, ".bxignore")
   if (existsSync(ignoreFile)) {
@@ -84,16 +78,15 @@ function collectIgnoreFilesRecursive(dir: string, ignored: string[]) {
   }
 }
 
+// --- Home config (RW/RO entries) ---
+
 export interface HomeConfig {
   allowed: Set<string>
   readOnly: Set<string>
 }
 
-/**
- * Parse ~/.bxignore for RW:/RO: prefixed lines and return allowed directories.
- * Lines without prefix are ignored here (handled by collectIgnoredPaths).
- * Also checks for deprecated ~/.bxallow and migrates its entries.
- */
+const ACCESS_PREFIX_RE = /^(RW|RO):(.+)$/i
+
 export function parseHomeConfig(home: string, workDirs: string[]): HomeConfig {
   const allowed = new Set(workDirs)
   const readOnly = new Set<string>()
@@ -110,22 +103,15 @@ export function parseHomeConfig(home: string, workDirs: string[]): HomeConfig {
     }
   }
 
-  // Parse RW:/RO: entries from ~/.bxignore
   for (const line of parseLines(join(home, ".bxignore"))) {
-    let prefix = ""
-    let path = line
-    const match = line.match(/^(RW|RO):(.+)$/i)
-    if (match) {
-      prefix = match[1].toUpperCase()
-      path = match[2].trim()
-    }
+    const match = line.match(ACCESS_PREFIX_RE)
+    if (!match) continue
 
-    if (!prefix) continue // plain deny lines handled elsewhere
-
-    const absolute = resolve(home, path)
+    const [, prefix, rawPath] = match
+    const absolute = resolve(home, rawPath.trim())
     if (!existsSync(absolute) || !statSync(absolute).isDirectory()) continue
 
-    if (prefix === "RW") {
+    if (prefix.toUpperCase() === "RW") {
       allowed.add(absolute)
     } else {
       readOnly.add(absolute)
@@ -135,10 +121,17 @@ export function parseHomeConfig(home: string, workDirs: string[]): HomeConfig {
   return { allowed, readOnly }
 }
 
-/**
- * Recursively collect directories to block under parentDir.
- * Never blocks a parent of an allowed path — instead descends and blocks siblings.
- */
+// --- Blocked directory collection ---
+
+function isAllowedOrAncestor(fullPath: string, allowedDirs: Set<string>): "allowed" | "ancestor" | "none" {
+  if (allowedDirs.has(fullPath)) return "allowed"
+  const prefix = fullPath + "/"
+  for (const dir of allowedDirs) {
+    if (dir.startsWith(prefix)) return "ancestor"
+  }
+  return "none"
+}
+
 export function collectBlockedDirs(
   parentDir: string,
   home: string,
@@ -156,17 +149,15 @@ export function collectBlockedDirs(
     try {
       isDir = statSync(fullPath).isDirectory()
     } catch {
-      continue // Permission denied or similar — skip
+      continue
     }
     if (!isDir) continue
     if (parentDir === home && name === "Library") continue
     if (scriptDir.startsWith(fullPath + "/") || scriptDir === fullPath) continue
-    if (allowedDirs.has(fullPath)) continue
 
-    const hasAllowedChild = [...allowedDirs].some(
-      (d) => d.startsWith(fullPath + "/")
-    )
-    if (hasAllowedChild) {
+    const status = isAllowedOrAncestor(fullPath, allowedDirs)
+    if (status === "allowed") continue
+    if (status === "ancestor") {
       blocked.push(...collectBlockedDirs(fullPath, home, scriptDir, allowedDirs))
       continue
     }
@@ -177,25 +168,20 @@ export function collectBlockedDirs(
   return blocked
 }
 
-/**
- * Collect paths to deny from .bxignore files and built-in protected dotdirs.
- * Searches ~/.bxignore (skipping RW:/RO: lines) and recursively through all workdirs.
- */
+// --- Ignored path collection ---
+
 export function collectIgnoredPaths(home: string, workDirs: string[]): string[] {
   const ignored: string[] = PROTECTED_DOTDIRS.map((d) => join(home, d))
 
-  // Global ~/.bxignore — only plain lines (deny), skip RW:/RO: prefixed lines
+  // Global ~/.bxignore — only plain deny lines (skip RW:/RO: prefixed)
   const globalIgnore = join(home, ".bxignore")
   if (existsSync(globalIgnore)) {
-    const denyLines = parseLines(globalIgnore).filter((l) => !l.match(/^(RW|RO):/i))
+    const denyLines = parseLines(globalIgnore).filter((l) => !ACCESS_PREFIX_RE.test(l))
     for (const line of denyLines) {
-      for (const match of globSync(toGlobPattern(line), { cwd: home })) {
-        ignored.push(resolve(home, match))
-      }
+      ignored.push(...resolveGlobMatches(line, home))
     }
   }
 
-  // Recursive .bxignore in each workdir and its subdirectories
   for (const workDir of workDirs) {
     collectIgnoreFilesRecursive(workDir, ignored)
   }
@@ -203,45 +189,60 @@ export function collectIgnoredPaths(home: string, workDirs: string[]): string[] 
   return ignored
 }
 
-/**
- * Escape a path for use in SBPL string literals.
- * Backslashes and double quotes must be escaped to prevent profile injection.
- */
+// --- SBPL profile generation ---
+
 function sbplEscape(path: string): string {
   return path.replace(/\\/g, "\\\\").replace(/"/g, '\\"')
 }
 
-/**
- * Generate the SBPL sandbox profile string.
- */
-export function generateProfile(workDirs: string[], blockedDirs: string[], ignoredPaths: string[], readOnlyDirs: string[] = []): string {
-  const denyRules = blockedDirs
-    .map((dir) => `  (subpath "${sbplEscape(dir)}")`)
-    .join("\n")
+function sbplSubpath(path: string): string {
+  return `  (subpath "${sbplEscape(path)}")`
+}
 
-  const ignoredRules = ignoredPaths.length > 0
-    ? `\n; Hidden paths from .bxignore\n(deny file*\n${ignoredPaths.map((p) => {
-        let isDir = false
-        try { isDir = existsSync(p) && statSync(p).isDirectory() } catch {}
-        const escaped = sbplEscape(p)
-        return isDir ? `  (subpath "${escaped}")` : `  (literal "${escaped}")`
-      }).join("\n")}\n)\n`
-    : ""
+function sbplLiteral(path: string): string {
+  return `  (literal "${sbplEscape(path)}")`
+}
 
-  const readOnlyRules = readOnlyDirs.length > 0
-    ? `\n; Read-only directories\n(deny file-write*\n${readOnlyDirs.map((dir) => `  (subpath "${sbplEscape(dir)}")`).join("\n")}\n)\n`
-    : ""
+function sbplPathRule(path: string): string {
+  let isDir = false
+  try { isDir = existsSync(path) && statSync(path).isDirectory() } catch {}
+  return isDir ? sbplSubpath(path) : sbplLiteral(path)
+}
+
+function sbplDenyBlock(comment: string, verb: string, rules: string[]): string {
+  if (rules.length === 0) return ""
+  return `\n; ${comment}\n(deny ${verb}\n${rules.join("\n")}\n)\n`
+}
+
+export function generateProfile(
+  workDirs: string[],
+  blockedDirs: string[],
+  ignoredPaths: string[],
+  readOnlyDirs: string[] = [],
+): string {
+  const blockedRules = sbplDenyBlock(
+    "Blocked directories (auto-generated from $HOME contents)",
+    "file*",
+    blockedDirs.map(sbplSubpath),
+  )
+
+  const ignoredRules = sbplDenyBlock(
+    "Hidden paths from .bxignore",
+    "file*",
+    ignoredPaths.map(sbplPathRule),
+  )
+
+  const readOnlyRules = sbplDenyBlock(
+    "Read-only directories",
+    "file-write*",
+    readOnlyDirs.map(sbplSubpath),
+  )
 
   return `; Auto-generated sandbox profile
 ; Working directories: ${workDirs.join(", ")}
 
 (version 1)
 (allow default)
-
-; Blocked directories (auto-generated from $HOME contents)
-(deny file*
-${denyRules}
-)
-${ignoredRules}${readOnlyRules}
+${blockedRules}${ignoredRules}${readOnlyRules}
 `
 }

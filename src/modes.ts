@@ -5,9 +5,13 @@ import process from "node:process"
 import type { AppDefinition } from "./config.js"
 import { resolveAppPath, BUILTIN_MODES, type BuiltinMode } from "./config.js"
 
-interface Command {
+export interface Command {
   bin: string
   args: string[]
+}
+
+function isBuiltinMode(mode: string): mode is BuiltinMode {
+  return (BUILTIN_MODES as readonly string[]).includes(mode)
 }
 
 function shouldPassWorkdirs(app: AppDefinition, mode: string): boolean {
@@ -15,37 +19,41 @@ function shouldPassWorkdirs(app: AppDefinition, mode: string): boolean {
   return mode !== "xcode"
 }
 
-function appBundleFromExecutablePath(path: string): string | null {
-  if (path.endsWith(".app")) return path
+// --- .app bundle path helpers ---
 
-  const marker = ".app/"
-  const idx = path.indexOf(marker)
+function appBundleFromPath(path: string): string | null {
+  if (path.endsWith(".app")) return path
+  const idx = path.indexOf(".app/")
   if (idx < 0) return null
   return path.slice(0, idx + ".app".length)
 }
 
-function executablePathFromAppBundle(path: string, app: AppDefinition): string {
-  if (!path.endsWith(".app")) return path
-  if (app.binary) return join(path, app.binary)
-
-  const appName = basename(path, ".app")
-  return join(path, "Contents", "MacOS", appName)
+function executableFromBundle(bundlePath: string, app: AppDefinition): string {
+  if (!bundlePath.endsWith(".app")) return bundlePath
+  if (app.binary) return join(bundlePath, app.binary)
+  const appName = basename(bundlePath, ".app")
+  return join(bundlePath, "Contents", "MacOS", appName)
 }
 
+// --- Entitlement detection ---
+
+const SANDBOX_KEY = "com.apple.security.app-sandbox"
+
 export function hasAppSandboxEntitlement(entitlements: string): boolean {
-  const xmlTrue = /<key>\s*com\.apple\.security\.app-sandbox\s*<\/key>\s*<true\s*\/>/i
+  // XML plist: <key>...app-sandbox</key><true/>
+  const xmlTrue = new RegExp(`<key>\\s*${SANDBOX_KEY.replace(/\./g, "\\.")}\\s*</key>\\s*<true\\s*/>`, "i")
   if (xmlTrue.test(entitlements)) return true
 
-  const xmlFalse = /<key>\s*com\.apple\.security\.app-sandbox\s*<\/key>\s*<false\s*\/>/i
+  const xmlFalse = new RegExp(`<key>\\s*${SANDBOX_KEY.replace(/\./g, "\\.")}\\s*</key>\\s*<false\\s*/>`, "i")
   if (xmlFalse.test(entitlements)) return false
 
-  const kvTrue = /com\.apple\.security\.app-sandbox\s*[=:]\s*(1|true)/i
+  // Key-value style: com.apple.security.app-sandbox = true
+  const kvTrue = new RegExp(`${SANDBOX_KEY.replace(/\./g, "\\.")}\\s*[=:]\\s*(1|true)`, "i")
   return kvTrue.test(entitlements)
 }
 
-/**
- * Prepare VSCode isolated profile if --profile-sandbox is set.
- */
+// --- Public API ---
+
 export function setupVSCodeProfile(home: string) {
   const dataDir = join(home, ".vscode-sandbox")
   const globalExt = join(home, ".vscode", "extensions")
@@ -58,9 +66,6 @@ export function setupVSCodeProfile(home: string) {
   }
 }
 
-/**
- * Build the command + args to run inside the sandbox for the given mode.
- */
 export function buildCommand(
   mode: string,
   workDirs: string[],
@@ -69,23 +74,31 @@ export function buildCommand(
   appArgs: string[],
   apps: Record<string, AppDefinition>,
 ): Command {
-  // Built-in shell modes
-  if ((BUILTIN_MODES as readonly string[]).includes(mode)) {
-    switch (mode as BuiltinMode) {
-      case "term": {
-        const shell = process.env.SHELL ?? "/bin/zsh"
-        return { bin: shell, args: ["-l"] }
-      }
-      case "claude": {
-        return { bin: "claude", args: [] }
-      }
-      case "exec": {
-        return { bin: appArgs[0], args: appArgs.slice(1) }
-      }
-    }
+  if (isBuiltinMode(mode)) {
+    return buildBuiltinCommand(mode, appArgs)
   }
+  return buildAppCommand(mode, workDirs, home, profileSandbox, appArgs, apps)
+}
 
-  // App mode — resolve from app definitions
+function buildBuiltinCommand(mode: BuiltinMode, appArgs: string[]): Command {
+  switch (mode) {
+    case "term":
+      return { bin: process.env.SHELL ?? "/bin/zsh", args: ["-l"] }
+    case "claude":
+      return { bin: "claude", args: [] }
+    case "exec":
+      return { bin: appArgs[0], args: appArgs.slice(1) }
+  }
+}
+
+function buildAppCommand(
+  mode: string,
+  workDirs: string[],
+  home: string,
+  profileSandbox: boolean,
+  appArgs: string[],
+  apps: Record<string, AppDefinition>,
+): Command {
   const app = apps[mode]
   if (!app) {
     console.error(`sandbox: unknown mode "${mode}"`)
@@ -100,58 +113,43 @@ export function buildCommand(
     process.exit(1)
   }
 
-  const bin = executablePathFromAppBundle(resolvedPath, app)
-
+  const bin = executableFromBundle(resolvedPath, app)
   const args: string[] = []
 
-  // VSCode-specific: profile sandbox flags
   if (mode === "code" && profileSandbox) {
     const dataDir = join(home, ".vscode-sandbox")
     args.push("--user-data-dir", join(dataDir, "data"))
     args.push("--extensions-dir", join(dataDir, "extensions"))
   }
 
-  // App-specific extra args
   if (app.args) args.push(...app.args)
-
-  // Optional CLI app args after "--" (e.g. bx xcode <workdir> -- MyApp.xcworkspace)
   if (appArgs.length > 0) args.push(...appArgs)
-
-  // Workdirs: per-app behavior, defaults to true (xcode remains false by default).
-  if (shouldPassWorkdirs(app, mode)) {
-    args.push(...workDirs)
-  }
+  if (shouldPassWorkdirs(app, mode)) args.push(...workDirs)
 
   return { bin, args }
 }
 
-/**
- * Best-effort app activation for GUI app modes.
- * Runs outside the sandbox so macOS can bring the app to front.
- */
 export function getActivationCommand(mode: string, apps: Record<string, AppDefinition>): Command | null {
-  if ((BUILTIN_MODES as readonly string[]).includes(mode)) return null
+  if (isBuiltinMode(mode)) return null
 
   const app = apps[mode]
   if (!app) return null
 
   if (app.bundle) {
     return { bin: "/usr/bin/open", args: ["-b", app.bundle] }
-  } else {
-    const bin = resolveAppPath(app)
-    if (!bin) return null
-    const bundlePath = appBundleFromExecutablePath(bin)
-    if (!bundlePath) return null
-    return { bin: "/usr/bin/open", args: ["-a", bundlePath] }
   }
+
+  const resolved = resolveAppPath(app)
+  if (!resolved) return null
+
+  const bundlePath = appBundleFromPath(resolved)
+  if (!bundlePath) return null
+
+  return { bin: "/usr/bin/open", args: ["-a", bundlePath] }
 }
 
-/**
- * Best-effort warning for apps that are already sandboxed by Apple entitlements.
- * Nested sandboxing can lead to unexpected EPERM/launch behavior.
- */
 export function getNestedSandboxWarning(mode: string, apps: Record<string, AppDefinition>): string | null {
-  if ((BUILTIN_MODES as readonly string[]).includes(mode)) return null
+  if (isBuiltinMode(mode)) return null
 
   const app = apps[mode]
   if (!app) return null
@@ -159,7 +157,7 @@ export function getNestedSandboxWarning(mode: string, apps: Record<string, AppDe
   const resolvedPath = resolveAppPath(app)
   if (!resolvedPath) return null
 
-  const target = appBundleFromExecutablePath(resolvedPath) ?? resolvedPath
+  const target = appBundleFromPath(resolvedPath) ?? resolvedPath
 
   try {
     const entitlements = execFileSync("codesign", ["-d", "--entitlements", "-", target], {
@@ -171,7 +169,7 @@ export function getNestedSandboxWarning(mode: string, apps: Record<string, AppDe
       return `sandbox: warning: app "${mode}" appears to have Apple App Sandbox enabled; nested sandboxing may cause startup/access issues`
     }
   } catch {
-    // Ignore inspection failures (unsigned apps, stripped metadata, missing tools).
+    // Ignore: unsigned apps, stripped metadata, missing tools
   }
 
   return null
@@ -181,13 +179,12 @@ export function bringAppToFront(mode: string, apps: Record<string, AppDefinition
   const cmd = getActivationCommand(mode, apps)
   if (!cmd) return
 
-  // Slight delay helps when app is still bootstrapping.
   setTimeout(() => {
     try {
       const p = spawn(cmd.bin, cmd.args, { stdio: "ignore", detached: true })
       p.unref()
     } catch {
-      // Ignore activation failures (launch itself already happened).
+      // Ignore activation failures
     }
   }, 250)
 }
