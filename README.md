@@ -154,6 +154,7 @@ path = "/usr/local/bin/code"
 
 | Field | Description |
 | --- | --- |
+| `mode` | Inherit from another app (e.g. `"code"`, `"cursor"`) — only `workdirs` / overrides needed |
 | `bundle` | macOS bundle identifier — used with `mdfind` to find the app automatically |
 | `binary` | Relative path to the executable inside the `.app` bundle |
 | `path` | Absolute path to the executable **or** `.app` bundle (highest priority, skips discovery) |
@@ -166,7 +167,23 @@ path = "/usr/local/bin/code"
 
 `passWorkdirs` controls launch argument behavior and is independent of sandbox scope. Even with `passWorkdirs = false`, the provided `workdir...` still defines what the sandbox can access.
 
-**Preconfigured workdirs** let you define your usual environment per app:
+**Workdir shortcuts with `mode`** let you create named entries that inherit everything from an existing app — just set `mode` and `workdirs`:
+
+```toml
+# "bx myproject" opens VSCode with these directories
+[apps.myproject]
+mode = "code"
+workdirs = ["~/work/my-project", "~/work/shared-lib"]
+
+# "bx ios" opens Xcode with this directory
+[apps.ios]
+mode = "xcode"
+workdirs = ["~/work/my-ios-app"]
+```
+
+Running `bx myproject` inherits VSCode's bundle, binary, args, and everything else — no need to repeat the full app configuration. Own fields override inherited ones, so you can still customize specific settings. Chaining is supported (e.g. `myproject` → `cursor` → `code`).
+
+**Preconfigured workdirs** also work directly on app definitions:
 
 ```toml
 [apps.code]

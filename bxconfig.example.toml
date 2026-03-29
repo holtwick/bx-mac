@@ -51,3 +51,14 @@
 # [apps.sublime]
 # bundle = "com.sublimetext.4"
 # binary = "Contents/MacOS/sublime_text"
+
+# --- Workdir shortcuts (inherit from another app via mode) ---
+# Only workdirs needed — everything else is inherited from the referenced app.
+
+# [apps.myproject]
+# mode = "code"
+# workdirs = ["~/work/my-project", "~/work/shared-lib"]
+
+# [apps.ios]
+# mode = "xcode"
+# workdirs = ["~/work/my-ios-app"]

@@ -63,12 +63,18 @@ args = ["--no-sandbox"]
 # Add a new app (explicit path, no discovery)
 [apps.zed]
 path = "/Applications/Zed.app/Contents/MacOS/zed"
+
+# Workdir shortcut — inherits everything from "code"
+[apps.myproject]
+mode = "code"
+workdirs = ["~/work/my-project", "~/work/shared-lib"]
 ```
 
 Available fields per app:
 
 | Field | Description |
 | --- | --- |
+| `mode` | Inherit from another app definition (e.g. `"code"`, `"cursor"`) |
 | `path` | Explicit absolute path to the executable (highest priority) |
 | `bundle` | macOS bundle identifier for auto-discovery via `mdfind` |
 | `binary` | Relative path to executable inside the `.app` bundle |
@@ -78,7 +84,7 @@ Available fields per app:
 
 App resolution order: `path` (explicit) → `bundle` + `binary` (mdfind auto-discovery) → `fallback` (hardcoded). See `bxconfig.example.toml` for all options.
 
-When overriding a built-in app, only the fields you specify are replaced — the rest (e.g. `bundle`, `args`) are kept from the built-in definition.
+When overriding a built-in app, only the fields you specify are replaced — the rest (e.g. `bundle`, `args`) are kept from the built-in definition. When using `mode`, all fields from the referenced app are inherited; own fields override inherited ones.
 
 **`~/.bxignore`** — Unified sandbox rules (paths relative to `$HOME`). One entry per line, empty lines and `#` comments are ignored:
 

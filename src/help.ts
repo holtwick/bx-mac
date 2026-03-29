@@ -47,6 +47,7 @@ Options:
 Configuration:
   ~/.bxconfig.toml     app definitions (TOML):
                          [apps.name]           add a new app
+                         mode = "..."           inherit from another app
                          bundle = "..."         macOS bundle ID (auto-discovery)
                          binary = "..."         relative path in .app bundle
                          path = "..."           explicit executable path

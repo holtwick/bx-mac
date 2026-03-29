@@ -15,9 +15,8 @@ function isBuiltinMode(mode: string): mode is BuiltinMode {
   return (BUILTIN_MODES as readonly string[]).includes(mode)
 }
 
-function shouldPassWorkdirs(app: AppDefinition, mode: string): boolean {
-  if (typeof app.passWorkdirs === "boolean") return app.passWorkdirs
-  return mode !== "xcode"
+function shouldPassWorkdirs(app: AppDefinition): boolean {
+  return app.passWorkdirs !== false
 }
 
 // --- .app bundle path helpers ---
@@ -125,7 +124,7 @@ function buildAppCommand(
 
   if (app.args) args.push(...app.args)
   if (appArgs.length > 0) args.push(...appArgs)
-  if (shouldPassWorkdirs(app, mode)) args.push(...workDirs)
+  if (shouldPassWorkdirs(app)) args.push(...workDirs)
 
   return { bin, args }
 }

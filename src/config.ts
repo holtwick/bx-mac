@@ -5,6 +5,8 @@ import { parse as parseToml } from "smol-toml"
 import { fmt } from "./fmt.js"
 
 export interface AppDefinition {
+  /** Inherit from another app definition (resolved during merge) */
+  mode?: string
   /** macOS bundle identifier for mdfind discovery */
   bundle?: string
   /** Relative path to executable inside .app bundle */
@@ -15,7 +17,7 @@ export interface AppDefinition {
   fallback?: string
   /** Extra args always passed to the app */
   args?: string[]
-  /** Whether to pass workdirs as launch arguments (default: true, xcode: false) */
+  /** Whether to pass workdirs as launch arguments (default: true) */
   passWorkdirs?: boolean
   /** Preconfigured working directories (used when none given on CLI) */
   workdirs?: string[]
@@ -33,6 +35,7 @@ export const BUILTIN_APPS: Record<string, AppDefinition> = {
     bundle: "com.apple.dt.Xcode",
     binary: "Contents/MacOS/Xcode",
     fallback: "/Applications/Xcode.app/Contents/MacOS/Xcode",
+    passWorkdirs: false,
   },
 }
 
@@ -59,6 +62,7 @@ export function loadConfig(home: string): BxConfig {
     if (doc.apps && typeof doc.apps === "object") {
       for (const [name, def] of Object.entries(doc.apps as Record<string, Record<string, unknown>>)) {
         apps[name] = {
+          mode: typeof def.mode === "string" ? def.mode : undefined,
           bundle: typeof def.bundle === "string" ? def.bundle : undefined,
           binary: typeof def.binary === "string" ? def.binary : undefined,
           path: typeof def.path === "string" ? def.path : undefined,
@@ -79,6 +83,8 @@ export function loadConfig(home: string): BxConfig {
 
 /**
  * Merge built-in apps with user config (config wins on conflict).
+ * Resolves `mode` references: an app with `mode = "code"` inherits
+ * all fields from the "code" definition, then overlays its own fields.
  */
 export function getAvailableApps(config: BxConfig): Record<string, AppDefinition> {
   const merged: Record<string, AppDefinition> = {}
@@ -89,14 +95,45 @@ export function getAvailableApps(config: BxConfig): Record<string, AppDefinition
 
   for (const [name, def] of Object.entries(config.apps)) {
     if (merged[name]) {
-      // Config overrides individual fields, keeping builtin defaults for unset fields
       merged[name] = { ...merged[name], ...stripUndefined(def) }
     } else {
       merged[name] = def
     }
   }
 
+  // Resolve mode references (supports chaining, detects cycles)
+  for (const name of Object.keys(merged)) {
+    merged[name] = resolveModeChain(name, merged)
+  }
+
   return merged
+}
+
+function resolveModeChain(
+  name: string,
+  apps: Record<string, AppDefinition>,
+  seen = new Set<string>(),
+): AppDefinition {
+  const def = apps[name]
+  if (!def.mode) return def
+
+  if (seen.has(name)) {
+    console.error(`\n${fmt.warn(`circular mode reference: ${[...seen, name].join(" → ")}`)}`)
+    const { mode: _, ...rest } = def
+    return rest
+  }
+  seen.add(name)
+
+  const target = apps[def.mode]
+  if (!target) {
+    console.error(`\n${fmt.warn(`mode "${def.mode}" not found for app "${name}"`)}`)
+    const { mode: _, ...rest } = def
+    return rest
+  }
+
+  const resolved = resolveModeChain(def.mode, apps, seen)
+  const { mode: _, ...ownFields } = def
+  return { ...resolved, ...stripUndefined(ownFields) }
 }
 
 function stripUndefined(obj: AppDefinition): Partial<AppDefinition> {

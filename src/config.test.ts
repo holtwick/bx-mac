@@ -46,6 +46,7 @@ path = "/Applications/Zed.app/Contents/MacOS/zed"
 `)
     const config = loadConfig("/Users/test")
     expect(config.apps.cursor).toEqual({
+      mode: undefined,
       bundle: "com.todesktop.230313mzl4w4u92",
       binary: "Contents/MacOS/Cursor",
       path: undefined,
@@ -95,6 +96,74 @@ describe("getAvailableApps", () => {
     expect(apps.code.bundle).toBe("com.microsoft.VSCode") // preserved from builtin
     // New app added
     expect(apps.myapp.path).toBe("/custom/myapp")
+  })
+
+  it("resolves mode references to inherit app fields", () => {
+    const apps = getAvailableApps({
+      apps: {
+        myproject: { mode: "code", workdirs: ["~/work/my-project"] },
+      },
+    })
+    expect(apps.myproject.bundle).toBe("com.microsoft.VSCode")
+    expect(apps.myproject.binary).toBe("Contents/MacOS/Electron")
+    expect(apps.myproject.workdirs).toEqual(["~/work/my-project"])
+    expect(apps.myproject.mode).toBeUndefined()
+  })
+
+  it("resolves chained mode references", () => {
+    const apps = getAvailableApps({
+      apps: {
+        cursor: { bundle: "com.cursor", binary: "Contents/MacOS/Cursor", args: ["--no-sandbox"] },
+        myproject: { mode: "cursor", workdirs: ["~/work/proj"] },
+      },
+    })
+    expect(apps.myproject.bundle).toBe("com.cursor")
+    expect(apps.myproject.args).toEqual(["--no-sandbox"])
+    expect(apps.myproject.workdirs).toEqual(["~/work/proj"])
+  })
+
+  it("own fields override inherited fields", () => {
+    const apps = getAvailableApps({
+      apps: {
+        mycode: { mode: "code", args: ["--disable-gpu"] },
+      },
+    })
+    expect(apps.mycode.bundle).toBe("com.microsoft.VSCode")
+    expect(apps.mycode.args).toEqual(["--disable-gpu"])
+  })
+
+  it("inherits passWorkdirs from referenced app", () => {
+    const apps = getAvailableApps({
+      apps: {
+        myxcode: { mode: "xcode", workdirs: ["~/work/ios"] },
+      },
+    })
+    expect(apps.myxcode.passWorkdirs).toBe(false)
+  })
+
+  it("warns on unknown mode reference", () => {
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {})
+    const apps = getAvailableApps({
+      apps: {
+        broken: { mode: "nonexistent", workdirs: ["~/work"] },
+      },
+    })
+    expect(apps.broken.workdirs).toEqual(["~/work"])
+    expect(spy).toHaveBeenCalledWith(expect.stringContaining("not found"))
+    spy.mockRestore()
+  })
+
+  it("warns on circular mode references", () => {
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {})
+    const apps = getAvailableApps({
+      apps: {
+        a: { mode: "b" },
+        b: { mode: "a" },
+      },
+    })
+    expect(apps.a).toBeDefined()
+    expect(spy).toHaveBeenCalledWith(expect.stringContaining("circular"))
+    spy.mockRestore()
   })
 })
 
