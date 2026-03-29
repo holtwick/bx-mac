@@ -32,18 +32,31 @@ if [ -n "${PREV_TAG}" ]; then
   echo ""
 fi
 
-# Create GitHub release with bx.js attached (opens editor for notes)
+# Build release notes from git log
+NOTES=""
+if [ -n "${PREV_TAG}" ]; then
+  NOTES=$(git log --pretty=format:"- %s" "${PREV_TAG}..HEAD" | grep -v "^- v[0-9]" || true)
+fi
+if [ -z "${NOTES}" ]; then
+  NOTES="- Release ${TAG}"
+fi
+
+# Create GitHub release with bx.js attached
 gh release create "${TAG}" dist/bx.js \
   --title "${TAG}" \
-  --generate-notes \
-  --notes-start-tag "${PREV_TAG:-}" \
-  --draft
+  --notes "${NOTES}" \
+  --latest
 
 echo ""
-echo "Draft release created — edit the notes on GitHub, then publish:"
-echo "  gh release edit ${TAG} --draft=false"
+echo "Release ${TAG} published on GitHub."
 
-# Publish to npm
+# Check npm login before publishing
+if ! npm whoami &>/dev/null; then
+  echo ""
+  echo "Not logged in to npm. Please log in first:"
+  npm login
+fi
+
 npm publish --access public
 
 # Update Homebrew formula
