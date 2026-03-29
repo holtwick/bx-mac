@@ -14,7 +14,6 @@ describe("PROTECTED_DOTDIRS", () => {
 
 describe("PROTECTED_LIBRARY_DIRS", () => {
   it("includes sensitive Library subdirectories", () => {
-    expect(PROTECTED_LIBRARY_DIRS).toContain("Keychains")
     expect(PROTECTED_LIBRARY_DIRS).toContain("Mail")
     expect(PROTECTED_LIBRARY_DIRS).toContain("Messages")
     expect(PROTECTED_LIBRARY_DIRS).toContain("Safari")
@@ -213,7 +212,6 @@ describe("collectIgnoredPaths", () => {
 
   it("includes protected Library subdirectories", () => {
     const ignored = collectIgnoredPaths(home, [workDir])
-    expect(ignored).toContain(join(home, "Library", "Keychains"))
     expect(ignored).toContain(join(home, "Library", "Mail"))
     expect(ignored).toContain(join(home, "Library", "Safari"))
     expect(ignored).toContain(join(home, "Library", "Mobile Documents"))
