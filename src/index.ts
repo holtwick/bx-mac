@@ -93,12 +93,14 @@ async function main() {
 
   const nestedSandboxWarning = getNestedSandboxWarning(mode, apps)
   if (nestedSandboxWarning) {
-    console.error(nestedSandboxWarning)
+    console.error(`   ⚠️  ${nestedSandboxWarning}`)
   }
 
   if (verbose) {
     printLaunchDetails(cmd, workDirs[0], getActivationCommand(mode, apps))
   }
+
+  console.error("")
 
   const child = spawn("sandbox-exec", [
     "-f", profilePath,
@@ -125,13 +127,18 @@ async function main() {
 async function confirmLaunch(workDir: string, mode: string) {
   const rl = createInterface({ input: process.stdin, output: process.stderr })
   const answer = await new Promise<string>((res) => {
-    rl.question(`sandbox: open ${workDir} in ${mode}? [Y/n] `, res)
+    rl.question(`🔒 Open ${workDir} in ${mode}? [Y/n] `, res)
   })
   rl.close()
   if (answer && !answer.match(/^y(es)?$/i)) {
     process.exit(0)
   }
 }
+
+// ANSI helpers
+const DIM = "\x1b[2m"
+const RESET = "\x1b[0m"
+const CYAN = "\x1b[36m"
 
 function printPolicySummary(
   mode: string,
@@ -140,19 +147,21 @@ function printPolicySummary(
   ignoredPaths: string[],
   readOnly: Set<string>,
 ) {
+  const dirLabel = workDirs.length === 1 ? workDirs[0] : `${workDirs.length} directories`
+  console.error(`\n🔒 ${CYAN}bx${RESET} · ${mode} → ${dirLabel}`)
+
+  const parts: string[] = [
+    `${blockedDirs.length} blocked`,
+    `${ignoredPaths.length} hidden`,
+  ]
+  if (readOnly.size > 0) {
+    parts.push(`${readOnly.size} read-only`)
+  }
   const extraIgnored = ignoredPaths.length - PROTECTED_DOTDIRS.length
   if (extraIgnored > 0) {
-    console.error(`sandbox: .bxignore hides ${extraIgnored} extra path(s)`)
+    parts.push(`${extraIgnored} from .bxignore`)
   }
-  if (readOnly.size > 0) {
-    console.error(`sandbox: ${readOnly.size} read-only director${readOnly.size === 1 ? "y" : "ies"}`)
-  }
-
-  const dirLabel = workDirs.length === 1 ? workDirs[0] : `${workDirs.length} directories`
-  console.error(`sandbox: ${mode} mode, working directory: ${dirLabel}`)
-  console.error(
-    `sandbox: policy summary: workdirs=${workDirs.length}, blocked-dirs=${blockedDirs.length}, hidden-paths=${ignoredPaths.length}, read-only=${readOnly.size}`,
-  )
+  console.error(`   ${DIM}${parts.join(" · ")}${RESET}`)
 }
 
 function printLaunchDetails(
@@ -161,14 +170,11 @@ function printLaunchDetails(
   activationCmd: { bin: string; args: string[] } | null,
 ) {
   const quote = (a: string) => JSON.stringify(a)
-  console.error("sandbox: launch details:")
-  console.error(`  bin: ${cmd.bin}`)
-  console.error(`  args(${cmd.args.length}): ${cmd.args.map(quote).join(" ") || "(none)"}`)
-  console.error(`  cwd: ${cwd}`)
+  console.error(`   ${DIM}bin:  ${cmd.bin}${RESET}`)
+  console.error(`   ${DIM}args: ${cmd.args.map(quote).join(" ") || "(none)"}${RESET}`)
+  console.error(`   ${DIM}cwd:  ${cwd}${RESET}`)
   if (activationCmd) {
-    console.error(`  focus: ${activationCmd.bin} ${activationCmd.args.map(quote).join(" ")}`)
-  } else {
-    console.error("  focus: (none)")
+    console.error(`   ${DIM}focus: ${activationCmd.bin} ${activationCmd.args.map(quote).join(" ")}${RESET}`)
   }
 }
 
