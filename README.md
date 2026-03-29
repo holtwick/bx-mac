@@ -336,6 +336,16 @@ cat ./src/index.ts               # ✅ Works!
 - **SQLite warnings:** `state.vscdb` errors may appear in logs — extensions still work
 - **`sandbox-exec` is undocumented:** Apple could change behavior with OS updates
 
+## 🤖 Built-in sandboxing in AI tools
+
+Some AI coding tools ship with their own sandboxing. bx complements these by providing a **uniform, tool-independent** layer that works across all applications — including editors, shells, and custom commands:
+
+- [Claude Code](https://code.claude.com/docs/en/sandboxing) — built-in sandbox for file and command restrictions
+- [Gemini CLI](https://geminicli.com/docs/cli/sandbox/) — sandbox mode for file system access control
+- [OpenAI Codex](https://developers.openai.com/codex/concepts/sandboxing) — containerized sandboxing for code execution
+
+These are great when available, but they only protect within their own tool. bx wraps the entire process — so even if a tool's built-in sandbox is misconfigured, disabled, or absent, your files stay protected.
+
 ## 📄 License
 
 MIT — see [LICENSE](LICENSE).
