@@ -4,7 +4,7 @@ import { spawn } from "node:child_process"
 import { createInterface } from "node:readline"
 import { fileURLToPath } from "node:url"
 import process from "node:process"
-import { checkOwnSandbox, checkVSCodeTerminal, checkExternalSandbox, checkWorkDirs } from "./guards.js"
+import { checkOwnSandbox, checkVSCodeTerminal, checkExternalSandbox, checkWorkDirs, checkAppAlreadyRunning } from "./guards.js"
 import { parseArgs } from "./args.js"
 import { PROTECTED_DOTDIRS, parseHomeConfig, collectBlockedDirs, collectIgnoredPaths, generateProfile } from "./profile.js"
 import { setupVSCodeProfile, buildCommand, bringAppToFront, getActivationCommand, getNestedSandboxWarning } from "./modes.js"
@@ -57,6 +57,7 @@ async function main() {
   }
 
   checkWorkDirs(workDirs, HOME)
+  await checkAppAlreadyRunning(mode, apps)
 
   if (mode === "code" && profileSandbox) {
     setupVSCodeProfile(HOME)

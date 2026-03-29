@@ -1,6 +1,10 @@
 import { accessSync, constants } from "node:fs"
 import { join } from "node:path"
+import { execFileSync } from "node:child_process"
+import { createInterface } from "node:readline"
 import process from "node:process"
+import type { AppDefinition } from "./config.js"
+import { BUILTIN_MODES } from "./config.js"
 
 /**
  * Abort if we're already inside a bx sandbox (env var set by us).
@@ -39,6 +43,49 @@ export function checkWorkDirs(workDirs: string[], home: string) {
       console.error("sandbox: Only directories inside $HOME are supported. Aborting.")
       process.exit(1)
     }
+  }
+}
+
+/**
+ * Warn if the target app is already running — the new workspace will open
+ * in the existing (unsandboxed) instance, bypassing our sandbox profile.
+ */
+export async function checkAppAlreadyRunning(mode: string, apps: Record<string, AppDefinition>) {
+  if ((BUILTIN_MODES as readonly string[]).includes(mode)) return
+
+  const app = apps[mode]
+  if (!app?.bundle) return
+
+  let running = false
+  try {
+    const list = execFileSync("lsappinfo", ["list"], {
+      encoding: "utf-8",
+      timeout: 3000,
+    })
+    running = list.includes(`bundleID="${app.bundle}"`)
+  } catch {
+    // lsappinfo failed — skip check silently
+    return
+  }
+
+  if (!running) return
+
+  console.error(`\n   ⚠️  "${mode}" is already running.`)
+  console.error(`      The workspace will open in the EXISTING instance — sandbox restrictions will NOT apply.`)
+  if (mode === "code") {
+    console.error(`      Quit the app first, or use --profile-sandbox for an isolated instance.`)
+  } else {
+    console.error(`      Quit the app first to ensure sandbox protection.`)
+  }
+
+  const rl = createInterface({ input: process.stdin, output: process.stderr })
+  const answer = await new Promise<string>((res) => {
+    rl.question("      Continue without sandbox? [y/N] ", res)
+  })
+  rl.close()
+
+  if (!answer.match(/^y(es)?$/i)) {
+    process.exit(0)
   }
 }
 
