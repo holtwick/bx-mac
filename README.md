@@ -1,5 +1,10 @@
 # 📦 bx
 
+[![npm version](https://img.shields.io/npm/v/bx-mac?color=blue)](https://www.npmjs.com/package/bx-mac)
+[![npm downloads](https://img.shields.io/npm/dm/bx-mac)](https://www.npmjs.com/package/bx-mac)
+[![license](https://img.shields.io/github/license/holtwick/bx-mac)](https://github.com/holtwick/bx-mac/blob/master/LICENSE)
+[![macOS](https://img.shields.io/badge/platform-macOS-lightgrey)](https://github.com/holtwick/bx-mac)
+
 > **Put your AI in a box.** Launch VSCode, Claude Code, a terminal, or any command in a macOS sandbox — your tools can only see the project you're working on.
 
 ## 🤔 Why?
