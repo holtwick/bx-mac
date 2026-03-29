@@ -2,7 +2,7 @@ import { existsSync, globSync, readFileSync, readdirSync, statSync } from "node:
 import { join, resolve } from "node:path"
 
 export const PROTECTED_DOTDIRS = [
-  ".Trash",
+  // ".Trash",
   ".ssh",
   ".gnupg",
   ".docker",

@@ -218,7 +218,7 @@ ro:shared/toolchain
 
 Deny rules are applied **in addition** to the built-in protected list:
 
-> 🔒 `.Trash` `.ssh` `.gnupg` `.docker` `.zsh_sessions` `.cargo` `.gradle` `.gem`
+> 🔒 `.ssh` `.gnupg` `.docker` `.zsh_sessions` `.cargo` `.gradle` `.gem`
 
 ### `<project>/.bxignore`
 

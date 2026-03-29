@@ -131,7 +131,7 @@ secrets/          # blocks secrets/ directories at any depth
 
 These are always blocked, regardless of configuration:
 
-`.Trash`, `.ssh`, `.gnupg`, `.docker`, `.zsh_sessions`, `.cargo`, `.gradle`, `.gem`
+`.ssh`, `.gnupg`, `.docker`, `.zsh_sessions`, `.cargo`, `.gradle`, `.gem`
 
 ## Architecture
 

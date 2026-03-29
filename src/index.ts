@@ -15,8 +15,8 @@ import { fmt } from "./fmt.js"
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 
-declare const __VERSION__: string
-const VERSION = typeof __VERSION__ !== "undefined" ? __VERSION__ : "dev"
+import pkg from "../package.json" with { type: "json" }
+const VERSION = pkg.version
 
 // --- Early exits: --version / --help (before HOME check) ---
 
