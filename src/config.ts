@@ -117,7 +117,7 @@ export function getAvailableApps(config: BxConfig): Record<string, AppDefinition
     if (merged[name]) {
       merged[name] = { ...merged[name], ...stripUndefined(def) }
     } else {
-      merged[name] = def
+      merged[name] = (def.mode || def.bundle || def.path || def.fallback) ? def : { ...def, mode: "code" }
     }
   }
 
