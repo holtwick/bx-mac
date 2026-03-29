@@ -8,7 +8,10 @@ export default defineConfig({
   output: {
     file: "dist/bx.js",
     format: "esm",
-    banner: `#!/usr/bin/env node\nconst __VERSION__ = ${JSON.stringify(pkg.version)};`,
+    banner: "#!/usr/bin/env node",
+  },
+  define: {
+    __VERSION__: JSON.stringify(pkg.version),
   },
   platform: "node",
 })

@@ -11,9 +11,7 @@ interface Command {
 }
 
 function shouldPassWorkdirs(app: AppDefinition, mode: string): boolean {
-  const explicit = (app as AppDefinition & { passWorkdirs?: unknown }).passWorkdirs
-  if (typeof explicit === "boolean") return explicit
-  // Backward-compatible default until every caller provides passWorkdirs in app definitions.
+  if (typeof app.passWorkdirs === "boolean") return app.passWorkdirs
   return mode !== "xcode"
 }
 

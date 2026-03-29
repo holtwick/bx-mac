@@ -14,6 +14,8 @@ export interface AppDefinition {
   fallback?: string
   /** Extra args always passed to the app */
   args?: string[]
+  /** Whether to pass workdirs as launch arguments (default: true, xcode: false) */
+  passWorkdirs?: boolean
 }
 
 /** Built-in app definitions — always available, can be overridden via config */
@@ -59,6 +61,7 @@ export function loadConfig(home: string): BxConfig {
           path: typeof def.path === "string" ? def.path : undefined,
           fallback: typeof def.fallback === "string" ? def.fallback : undefined,
           args: Array.isArray(def.args) ? def.args.filter((a): a is string => typeof a === "string") : undefined,
+          passWorkdirs: typeof def.passWorkdirs === "boolean" ? def.passWorkdirs : undefined,
         }
       }
     }
@@ -92,12 +95,12 @@ export function getAvailableApps(config: BxConfig): Record<string, AppDefinition
   return merged
 }
 
-function stripUndefined(obj: Record<string, unknown>): Record<string, unknown> {
+function stripUndefined(obj: AppDefinition): Partial<AppDefinition> {
   const result: Record<string, unknown> = {}
   for (const [k, v] of Object.entries(obj)) {
     if (v !== undefined) result[k] = v
   }
-  return result
+  return result as Partial<AppDefinition>
 }
 
 /**
@@ -121,8 +124,9 @@ export function resolveAppPath(app: AppDefinition): string | null {
   // 2. Auto-discovery via mdfind
   if (app.bundle) {
     try {
+      const safeBundleId = app.bundle.replace(/'/g, "'\\''")
       const result = execFileSync("mdfind", [
-        `kMDItemCFBundleIdentifier == '${app.bundle}'`,
+        `kMDItemCFBundleIdentifier == '${safeBundleId}'`,
       ], { encoding: "utf-8", timeout: 5000 }).trim()
 
       const appPath = result.split("\n")[0]

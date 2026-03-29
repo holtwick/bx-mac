@@ -204,23 +204,32 @@ export function collectIgnoredPaths(home: string, workDirs: string[]): string[] 
 }
 
 /**
+ * Escape a path for use in SBPL string literals.
+ * Backslashes and double quotes must be escaped to prevent profile injection.
+ */
+function sbplEscape(path: string): string {
+  return path.replace(/\\/g, "\\\\").replace(/"/g, '\\"')
+}
+
+/**
  * Generate the SBPL sandbox profile string.
  */
 export function generateProfile(workDirs: string[], blockedDirs: string[], ignoredPaths: string[], readOnlyDirs: string[] = []): string {
   const denyRules = blockedDirs
-    .map((dir) => `  (subpath "${dir}")`)
+    .map((dir) => `  (subpath "${sbplEscape(dir)}")`)
     .join("\n")
 
   const ignoredRules = ignoredPaths.length > 0
     ? `\n; Hidden paths from .bxignore\n(deny file*\n${ignoredPaths.map((p) => {
         let isDir = false
         try { isDir = existsSync(p) && statSync(p).isDirectory() } catch {}
-        return isDir ? `  (subpath "${p}")` : `  (literal "${p}")`
+        const escaped = sbplEscape(p)
+        return isDir ? `  (subpath "${escaped}")` : `  (literal "${escaped}")`
       }).join("\n")}\n)\n`
     : ""
 
   const readOnlyRules = readOnlyDirs.length > 0
-    ? `\n; Read-only directories\n(deny file-write*\n${readOnlyDirs.map((dir) => `  (subpath "${dir}")`).join("\n")}\n)\n`
+    ? `\n; Read-only directories\n(deny file-write*\n${readOnlyDirs.map((dir) => `  (subpath "${sbplEscape(dir)}")`).join("\n")}\n)\n`
     : ""
 
   return `; Auto-generated sandbox profile

@@ -3,10 +3,8 @@ import { buildCommand, getActivationCommand, hasAppSandboxEntitlement } from "./
 import type { AppDefinition } from "./config.js"
 import { BUILTIN_APPS } from "./config.js"
 
-type TestAppDefinition = AppDefinition & { passWorkdirs?: boolean }
-
 // Use builtin apps for tests, with fallback paths that may not exist on CI
-const testApps: Record<string, TestAppDefinition> = {
+const testApps: Record<string, AppDefinition> = {
   ...BUILTIN_APPS,
   // Override with explicit paths so tests don't depend on mdfind
   code: { ...BUILTIN_APPS.code, path: "/test/VSCode/Electron" },

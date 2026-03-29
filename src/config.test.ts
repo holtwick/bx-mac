@@ -51,6 +51,7 @@ path = "/Applications/Zed.app/Contents/MacOS/zed"
       path: undefined,
       fallback: undefined,
       args: ["--no-sandbox"],
+      passWorkdirs: undefined,
     })
     expect(config.apps.zed?.path).toBe("/Applications/Zed.app/Contents/MacOS/zed")
   })
