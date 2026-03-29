@@ -1,9 +1,10 @@
-import { statSync, writeFileSync, rmSync } from "node:fs"
+import { statSync, writeFileSync, rmSync, readFileSync, existsSync } from "node:fs"
 import { join, resolve, dirname } from "node:path"
 import { spawn } from "node:child_process"
 import { createInterface } from "node:readline"
 import { fileURLToPath } from "node:url"
 import process from "node:process"
+import { parse as parseToml } from "smol-toml"
 import { checkOwnSandbox, checkVSCodeTerminal, checkExternalSandbox, checkWorkDirs } from "./guards.js"
 import { parseArgs } from "./args.js"
 import { PROTECTED_DOTDIRS, parseHomeConfig, collectBlockedDirs, collectIgnoredPaths, generateProfile } from "./profile.js"
@@ -14,6 +15,30 @@ const __dirname = dirname(fileURLToPath(import.meta.url))
 
 declare const __VERSION__: string
 const VERSION = typeof __VERSION__ !== "undefined" ? __VERSION__ : "dev"
+
+function loadPassWorkdirsOverrides(home: string): Record<string, boolean> {
+  const configPath = join(home, ".bxconfig.toml")
+  if (!existsSync(configPath)) return {}
+
+  try {
+    const raw = readFileSync(configPath, "utf-8")
+    const doc = parseToml(raw) as Record<string, unknown>
+    const overrides: Record<string, boolean> = {}
+
+    const appsDoc = doc.apps
+    if (!appsDoc || typeof appsDoc !== "object") return overrides
+
+    for (const [name, def] of Object.entries(appsDoc as Record<string, Record<string, unknown>>)) {
+      if (typeof def.passWorkdirs === "boolean") {
+        overrides[name] = def.passWorkdirs
+      }
+    }
+
+    return overrides
+  } catch {
+    return {}
+  }
+}
 
 // --- --version and --help ---
 if (process.argv.includes("--version") || process.argv.includes("-v")) {
@@ -52,6 +77,7 @@ Configuration:
                          binary = "..."         relative path in .app bundle
                          path = "..."           explicit executable path
                          args = ["..."]         extra arguments
+                         passWorkdirs = true|false pass workdirs as launch args
                        built-in apps (code, xcode) can be overridden
   ~/.bxignore          sandbox rules (one per line):
                          path         block access (deny)
@@ -67,6 +93,12 @@ https://github.com/holtwick/bx-mac`)
 const HOME = process.env.HOME!
 const config = loadConfig(HOME)
 const apps = getAvailableApps(config)
+const passWorkdirsOverrides = loadPassWorkdirsOverrides(HOME)
+for (const [name, value] of Object.entries(passWorkdirsOverrides)) {
+  if (apps[name]) {
+    ; (apps[name] as typeof apps[string] & { passWorkdirs?: boolean }).passWorkdirs = value
+  }
+}
 const validModes = getValidModes(apps)
 
 const { mode, workArgs, verbose, dry, profileSandbox, appArgs, implicit } = parseArgs(validModes)

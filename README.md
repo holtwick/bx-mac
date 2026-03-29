@@ -75,6 +75,8 @@ For app modes, values before `--` define the sandbox scope (`workdir...`). Value
 
 For `xcode`, this distinction is important: the sandbox workdir is **not** passed as an Xcode open argument. Use `--` if you want to open a specific `.xcworkspace` or `.xcodeproj`.
 
+This behavior is configurable per app via `passWorkdirs` in `~/.bxconfig.toml` (default: `true`, built-in `xcode` default: `false`).
+
 GUI app modes are activated in the foreground on launch (best effort), so the opened app should become the frontmost app.
 
 ### Examples
@@ -151,8 +153,11 @@ path = "/usr/local/bin/code"
 | `path` | Absolute path to the executable **or** `.app` bundle (highest priority, skips discovery) |
 | `fallback` | Absolute fallback path if `mdfind` discovery fails |
 | `args` | Extra arguments always passed to the app |
+| `passWorkdirs` | Whether `workdir...` is forwarded as app launch args (`true`/`false`) |
 
 **Resolution order:** `path` → `mdfind` by `bundle` + `binary` → `fallback`
+
+`passWorkdirs` controls launch argument behavior and is independent of sandbox scope. Even with `passWorkdirs = false`, the provided `workdir...` still defines what the sandbox can access.
 
 When overriding a built-in app, only the specified fields are replaced — unset fields keep their defaults. See [`bxconfig.example.toml`](bxconfig.example.toml) for a complete reference.
 
@@ -248,6 +253,7 @@ bx detects and prevents problematic scenarios:
 - **🔄 Sandbox nesting:** If `CODEBOX_SANDBOX=1` is set (auto-propagated), bx refuses to start — nested sandboxes cause silent failures.
 - **🔍 Unknown sandbox:** On startup, bx probes `~/Documents`, `~/Desktop`, `~/Downloads`. If any return `EPERM`, another sandbox is active — bx aborts.
 - **⚠️ VSCode terminal:** If `VSCODE_PID` is set, bx warns that it will launch a *new* instance, not sandbox the current one.
+- **🧩 App already sandboxed:** For GUI app modes, bx inspects app entitlements (best effort) and warns if Apple App Sandbox is enabled, since nested sandboxing can cause startup/access issues.
 
 ## 💡 Tips
 

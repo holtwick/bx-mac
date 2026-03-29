@@ -3,13 +3,16 @@ import { buildCommand, getActivationCommand, hasAppSandboxEntitlement } from "./
 import type { AppDefinition } from "./config.js"
 import { BUILTIN_APPS } from "./config.js"
 
+type TestAppDefinition = AppDefinition & { passWorkdirs?: boolean }
+
 // Use builtin apps for tests, with fallback paths that may not exist on CI
-const testApps: Record<string, AppDefinition> = {
+const testApps: Record<string, TestAppDefinition> = {
   ...BUILTIN_APPS,
   // Override with explicit paths so tests don't depend on mdfind
   code: { ...BUILTIN_APPS.code, path: "/test/VSCode/Electron" },
   xcode: { ...BUILTIN_APPS.xcode, path: "/test/Xcode" },
   custom: { path: "/test/CustomApp", args: ["--flag"] },
+  customNoWorkdirs: { path: "/test/CustomNoWorkdirs", passWorkdirs: false },
   gram: { path: "/Applications/Gram.app" },
 }
 
@@ -74,6 +77,12 @@ describe("buildCommand", () => {
     expect(cmd.bin).toBe("/test/CustomApp")
     expect(cmd.args).toContain("--flag")
     expect(cmd.args).toContain("/work/a")
+  })
+
+  it("custom app can disable forwarding workdirs via passWorkdirs=false", () => {
+    const cmd = buildCommand("customNoWorkdirs", ["/work/a"], home, false, [], testApps)
+    expect(cmd.bin).toBe("/test/CustomNoWorkdirs")
+    expect(cmd.args).not.toContain("/work/a")
   })
 
   it("normalizes .app path to executable for custom app", () => {
