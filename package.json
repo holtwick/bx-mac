@@ -30,8 +30,22 @@
     "claude-code",
     "terminal"
   ],
-  "author": "Dirk Holtwick",
+  "author": {
+    "name": "Dirk Holtwick",
+    "url": "https://holtwick.de"
+  },
   "license": "MIT",
+  "homepage": "https://github.com/holtwick/bx-mac#readme",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/holtwick/bx-mac.git"
+  },
+  "bugs": {
+    "url": "https://github.com/holtwick/bx-mac/issues"
+  },
+  "os": [
+    "darwin"
+  ],
   "devDependencies": {
     "@types/node": "^25.5.0",
     "rolldown": "^1.0.0-rc.12",
