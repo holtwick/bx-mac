@@ -23,10 +23,25 @@ fi
 git tag "${TAG}" 2>/dev/null || echo "Tag ${TAG} already exists, reusing it."
 git push origin "${TAG}" 2>/dev/null || true
 
-# Create GitHub release with bx.js attached
+# Show changes since last release for context
+PREV_TAG=$(git tag --sort=-v:refname | sed -n '2p')
+if [ -n "${PREV_TAG}" ]; then
+  echo ""
+  echo "Changes since ${PREV_TAG}:"
+  git log --oneline "${PREV_TAG}..HEAD"
+  echo ""
+fi
+
+# Create GitHub release with bx.js attached (opens editor for notes)
 gh release create "${TAG}" dist/bx.js \
   --title "${TAG}" \
-  --generate-notes
+  --generate-notes \
+  --notes-start-tag "${PREV_TAG:-}" \
+  --draft
+
+echo ""
+echo "Draft release created — edit the notes on GitHub, then publish:"
+echo "  gh release edit ${TAG} --draft=false"
 
 # Publish to npm
 npm publish --access public
