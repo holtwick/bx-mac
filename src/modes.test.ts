@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest"
-import { buildCommand, getActivationCommand } from "./modes.js"
+import { buildCommand, getActivationCommand, hasAppSandboxEntitlement } from "./modes.js"
 import type { AppDefinition } from "./config.js"
 import { BUILTIN_APPS } from "./config.js"
 
@@ -101,5 +101,32 @@ describe("getActivationCommand", () => {
       bin: "/usr/bin/open",
       args: ["-a", "/Applications/Gram.app"],
     })
+  })
+})
+
+describe("hasAppSandboxEntitlement", () => {
+  it("detects app sandbox when plist has true value", () => {
+    const xml = `
+<?xml version="1.0" encoding="UTF-8"?>
+<plist version="1.0"><dict>
+  <key>com.apple.security.app-sandbox</key>
+  <true/>
+</dict></plist>`
+    expect(hasAppSandboxEntitlement(xml)).toBe(true)
+  })
+
+  it("does not detect app sandbox when plist has false value", () => {
+    const xml = `
+<?xml version="1.0" encoding="UTF-8"?>
+<plist version="1.0"><dict>
+  <key>com.apple.security.app-sandbox</key>
+  <false/>
+</dict></plist>`
+    expect(hasAppSandboxEntitlement(xml)).toBe(false)
+  })
+
+  it("detects app sandbox in key-value style output", () => {
+    const text = "com.apple.security.app-sandbox = true"
+    expect(hasAppSandboxEntitlement(text)).toBe(true)
   })
 })

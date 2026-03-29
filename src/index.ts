@@ -7,7 +7,7 @@ import process from "node:process"
 import { checkOwnSandbox, checkVSCodeTerminal, checkExternalSandbox, checkWorkDirs } from "./guards.js"
 import { parseArgs } from "./args.js"
 import { PROTECTED_DOTDIRS, parseHomeConfig, collectBlockedDirs, collectIgnoredPaths, generateProfile } from "./profile.js"
-import { setupVSCodeProfile, buildCommand, bringAppToFront } from "./modes.js"
+import { setupVSCodeProfile, buildCommand, bringAppToFront, getActivationCommand, getNestedSandboxWarning } from "./modes.js"
 import { loadConfig, getAvailableApps, getValidModes } from "./config.js"
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
@@ -72,6 +72,10 @@ const validModes = getValidModes(apps)
 const { mode, workArgs, verbose, dry, profileSandbox, appArgs, implicit } = parseArgs(validModes)
 const WORK_DIRS = workArgs.map((a) => resolve(a))
 
+function quoteArg(a: string): string {
+  return JSON.stringify(a)
+}
+
 // --- Confirm when invoked without arguments ---
 if (implicit && !dry) {
   const rl = createInterface({ input: process.stdin, output: process.stderr })
@@ -116,6 +120,9 @@ const profile = generateProfile(WORK_DIRS, blockedDirs, ignoredPaths, [...readOn
 
 const dirLabel = WORK_DIRS.length === 1 ? WORK_DIRS[0] : `${WORK_DIRS.length} directories`
 console.error(`sandbox: ${mode} mode, working directory: ${dirLabel}`)
+console.error(
+  `sandbox: policy summary: workdirs=${WORK_DIRS.length}, blocked-dirs=${blockedDirs.length}, hidden-paths=${ignoredPaths.length}, read-only=${readOnly.size}`,
+)
 
 if (verbose) {
   console.error("\n--- Generated sandbox profile ---")
@@ -186,6 +193,24 @@ const profilePath = join("/tmp", `bx-${process.pid}.sb`)
 writeFileSync(profilePath, profile)
 
 const cmd = buildCommand(mode, WORK_DIRS, HOME, profileSandbox, appArgs, apps)
+const activationCmd = getActivationCommand(mode, apps)
+const nestedSandboxWarning = getNestedSandboxWarning(mode, apps)
+
+if (nestedSandboxWarning) {
+  console.error(nestedSandboxWarning)
+}
+
+if (verbose) {
+  console.error("sandbox: launch details:")
+  console.error(`  bin: ${cmd.bin}`)
+  console.error(`  args(${cmd.args.length}): ${cmd.args.map(quoteArg).join(" ") || "(none)"}`)
+  console.error(`  cwd: ${WORK_DIRS[0]}`)
+  if (activationCmd) {
+    console.error(`  focus: ${activationCmd.bin} ${activationCmd.args.map(quoteArg).join(" ")}`)
+  } else {
+    console.error("  focus: (none)")
+  }
+}
 
 const child = spawn("sandbox-exec", [
   "-f", profilePath,

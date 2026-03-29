@@ -1,6 +1,6 @@
 import { cpSync, existsSync, mkdirSync } from "node:fs"
 import { join, basename } from "node:path"
-import { spawn } from "node:child_process"
+import { spawn, execFileSync } from "node:child_process"
 import process from "node:process"
 import type { AppDefinition } from "./config.js"
 import { resolveAppPath, BUILTIN_MODES, type BuiltinMode } from "./config.js"
@@ -8,6 +8,13 @@ import { resolveAppPath, BUILTIN_MODES, type BuiltinMode } from "./config.js"
 interface Command {
   bin: string
   args: string[]
+}
+
+function shouldPassWorkdirs(app: AppDefinition, mode: string): boolean {
+  const explicit = (app as AppDefinition & { passWorkdirs?: unknown }).passWorkdirs
+  if (typeof explicit === "boolean") return explicit
+  // Backward-compatible default until every caller provides passWorkdirs in app definitions.
+  return mode !== "xcode"
 }
 
 function appBundleFromExecutablePath(path: string): string | null {
@@ -25,6 +32,17 @@ function executablePathFromAppBundle(path: string, app: AppDefinition): string {
 
   const appName = basename(path, ".app")
   return join(path, "Contents", "MacOS", appName)
+}
+
+export function hasAppSandboxEntitlement(entitlements: string): boolean {
+  const xmlTrue = /<key>\s*com\.apple\.security\.app-sandbox\s*<\/key>\s*<true\s*\/>/i
+  if (xmlTrue.test(entitlements)) return true
+
+  const xmlFalse = /<key>\s*com\.apple\.security\.app-sandbox\s*<\/key>\s*<false\s*\/>/i
+  if (xmlFalse.test(entitlements)) return false
+
+  const kvTrue = /com\.apple\.security\.app-sandbox\s*[=:]\s*(1|true)/i
+  return kvTrue.test(entitlements)
 }
 
 /**
@@ -101,8 +119,8 @@ export function buildCommand(
   // Optional CLI app args after "--" (e.g. bx xcode <workdir> -- MyApp.xcworkspace)
   if (appArgs.length > 0) args.push(...appArgs)
 
-  // Workdirs: for Xcode we keep workdirs purely as sandbox scope, not as launch args.
-  if (mode !== "xcode") {
+  // Workdirs: per-app behavior, defaults to true (xcode remains false by default).
+  if (shouldPassWorkdirs(app, mode)) {
     args.push(...workDirs)
   }
 
@@ -128,6 +146,37 @@ export function getActivationCommand(mode: string, apps: Record<string, AppDefin
     if (!bundlePath) return null
     return { bin: "/usr/bin/open", args: ["-a", bundlePath] }
   }
+}
+
+/**
+ * Best-effort warning for apps that are already sandboxed by Apple entitlements.
+ * Nested sandboxing can lead to unexpected EPERM/launch behavior.
+ */
+export function getNestedSandboxWarning(mode: string, apps: Record<string, AppDefinition>): string | null {
+  if ((BUILTIN_MODES as readonly string[]).includes(mode)) return null
+
+  const app = apps[mode]
+  if (!app) return null
+
+  const resolvedPath = resolveAppPath(app)
+  if (!resolvedPath) return null
+
+  const target = appBundleFromExecutablePath(resolvedPath) ?? resolvedPath
+
+  try {
+    const entitlements = execFileSync("codesign", ["-d", "--entitlements", "-", target], {
+      encoding: "utf-8",
+      stdio: ["ignore", "pipe", "pipe"],
+    })
+
+    if (hasAppSandboxEntitlement(entitlements)) {
+      return `sandbox: warning: app "${mode}" appears to have Apple App Sandbox enabled; nested sandboxing may cause startup/access issues`
+    }
+  } catch {
+    // Ignore inspection failures (unsigned apps, stripped metadata, missing tools).
+  }
+
+  return null
 }
 
 export function bringAppToFront(mode: string, apps: Record<string, AppDefinition>) {

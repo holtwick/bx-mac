@@ -117,8 +117,10 @@ bx --verbose ~/work/my-project
 | Option | Description |
 | --- | --- |
 | `--dry` | Show a tree of all protected, read-only, and accessible paths — don't launch anything |
-| `--verbose` | Print the generated sandbox profile to stderr |
+| `--verbose` | Print the generated sandbox profile plus launch details (binary, arguments, cwd, focus command) |
 | `--profile-sandbox` | Use an isolated VSCode profile (separate extensions/settings, `code` mode only) |
+
+On normal runs, bx also prints a short policy summary (number of workdirs, blocked directories, hidden paths, and read-only directories).
 
 ## 📝 Configuration
 
