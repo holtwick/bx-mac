@@ -24,10 +24,10 @@ function kindIcon(kind: EntryKind): string {
   }
 }
 
-function insertPath(root: TreeNode, home: string, absPath: string, kind: EntryKind, isDir: boolean) {
-  const rel = absPath.startsWith(home + "/") ? absPath.slice(home.length + 1) : absPath
+function insertPath(root: TreeNode, homeParts: string[], absPath: string, kind: EntryKind, isDir: boolean) {
+  const parts = absPath.split("/").filter(Boolean)
   let node = root
-  for (const part of rel.split("/")) {
+  for (const part of parts) {
     if (!node.children.has(part)) {
       node.children.set(part, { children: new Map() })
     }
@@ -35,6 +35,22 @@ function insertPath(root: TreeNode, home: string, absPath: string, kind: EntryKi
   }
   node.kind = kind
   node.isDir = isDir
+}
+
+/** Collapse the tree down to the interesting nodes, keeping only branches
+ *  that contain a leaf with a kind (blocked/ignored/workdir/read-only).
+ *  Intermediate directories on the home path are kept as navigation context. */
+function pruneTree(node: TreeNode, currentParts: string[], homeParts: string[], depth: number): boolean {
+  if (node.kind) return true
+
+  const isOnHomePath = depth < homeParts.length && currentParts[depth] === homeParts[depth]
+
+  for (const [name, child] of [...node.children]) {
+    const keep = pruneTree(child, [...currentParts, name], homeParts, depth + 1)
+    if (!keep) node.children.delete(name)
+  }
+
+  return node.children.size > 0
 }
 
 function isDirectory(path: string): boolean {
@@ -74,25 +90,32 @@ export interface DryRunData {
   ignoredPaths: string[]
   readOnlyDirs: Set<string>
   workDirs: string[]
+  systemDenyPaths?: string[]
 }
 
-export function printDryRunTree({ home, blockedDirs, ignoredPaths, readOnlyDirs, workDirs }: DryRunData) {
+export function printDryRunTree({ home, blockedDirs, ignoredPaths, readOnlyDirs, workDirs, systemDenyPaths = [] }: DryRunData) {
   const root: TreeNode = { children: new Map() }
+  const homeParts = home.split("/").filter(Boolean)
 
   for (const dir of blockedDirs) {
-    insertPath(root, home, dir, "blocked", true)
+    insertPath(root, homeParts, dir, "blocked", true)
   }
   for (const path of ignoredPaths) {
-    insertPath(root, home, path, "ignored", isDirectory(path))
+    insertPath(root, homeParts, path, "ignored", isDirectory(path))
   }
   for (const dir of readOnlyDirs) {
-    insertPath(root, home, dir, "read-only", true)
+    insertPath(root, homeParts, dir, "read-only", true)
   }
   for (const dir of workDirs) {
-    insertPath(root, home, dir, "workdir", true)
+    insertPath(root, homeParts, dir, "workdir", true)
+  }
+  for (const dir of systemDenyPaths) {
+    insertPath(root, homeParts, dir, "blocked", true)
   }
 
-  console.log(`\n${CYAN}~/${RESET}`)
+  pruneTree(root, [], homeParts, 0)
+
+  console.log(`\n${CYAN}/${RESET}`)
   printNode(root, "")
   console.log(`\n${RED}✖${RESET} = denied  ${YELLOW}◉${RESET} = read-only  ${GREEN}✔${RESET} = read-write\n`)
 }

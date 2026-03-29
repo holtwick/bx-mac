@@ -25,7 +25,7 @@ export const PROTECTED_LIBRARY_DIRS = [
   "Google",
   "HomeKit",
   "IdentityServices",
-  "Keychains",
+  // "Keychains",
   "Mail",
   "Messages",
   "Mobile Documents",
@@ -289,11 +289,36 @@ function sbplDenyBlock(comment: string, verb: string, rules: string[]): string {
   return `\n; ${comment}\n(deny ${verb}\n${unique.join("\n")}\n)\n`
 }
 
+export function collectSystemDenyPaths(home: string): string[] {
+  const paths: string[] = []
+
+  // Block /Volumes (external drives, TimeMachine, NAS mounts)
+  if (existsSync("/Volumes")) {
+    paths.push("/Volumes")
+  }
+
+  // Block other users' home directories, but not our own
+  try {
+    for (const name of readdirSync("/Users")) {
+      const userDir = join("/Users", name)
+      if (userDir === home || name === "Shared") continue
+      try {
+        if (statSync(userDir).isDirectory()) {
+          paths.push(userDir)
+        }
+      } catch { /* permission denied */ }
+    }
+  } catch { /* /Users not readable */ }
+
+  return paths
+}
+
 export function generateProfile(
   workDirs: string[],
   blockedDirs: string[],
   ignoredPaths: string[],
   readOnlyDirs: string[] = [],
+  home: string = "",
 ): string {
   const blockedRules = sbplDenyBlock(
     "Blocked directories (auto-generated from $HOME contents)",
@@ -313,11 +338,15 @@ export function generateProfile(
     readOnlyDirs.map(sbplSubpath),
   )
 
+  const systemRules = home
+    ? sbplDenyBlock("System-level restrictions", "file*", collectSystemDenyPaths(home).map(sbplSubpath))
+    : ""
+
   return `; Auto-generated sandbox profile
 ; Working directories: ${workDirs.join(", ")}
 
 (version 1)
 (allow default)
-${blockedRules}${ignoredRules}${readOnlyRules}
+${blockedRules}${ignoredRules}${readOnlyRules}${systemRules}
 `
 }

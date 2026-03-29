@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url"
 import process from "node:process"
 import { checkOwnSandbox, checkVSCodeTerminal, checkExternalSandbox, checkWorkDirs, checkAppAlreadyRunning } from "./guards.js"
 import { parseArgs } from "./args.js"
-import { PROTECTED_DOTDIRS, parseHomeConfig, collectBlockedDirs, collectIgnoredPaths, generateProfile } from "./profile.js"
+import { PROTECTED_DOTDIRS, parseHomeConfig, collectBlockedDirs, collectIgnoredPaths, collectSystemDenyPaths, generateProfile } from "./profile.js"
 import { setupVSCodeProfile, buildCommand, bringAppToFront, getActivationCommand, getNestedSandboxWarning } from "./modes.js"
 import { loadConfig, getAvailableApps, getValidModes } from "./config.js"
 import { printHelp } from "./help.js"
@@ -87,7 +87,7 @@ async function main() {
 
   printPolicySummary(mode, workDirs, blockedDirs, ignoredPaths, readOnly)
 
-  const profile = generateProfile(workDirs, blockedDirs, ignoredPaths, [...readOnly])
+  const profile = generateProfile(workDirs, blockedDirs, ignoredPaths, [...readOnly], HOME)
 
   if (verbose) {
     console.error("\n--- Generated sandbox profile ---")
@@ -96,7 +96,8 @@ async function main() {
   }
 
   if (dry) {
-    printDryRunTree({ home: HOME, blockedDirs, ignoredPaths, readOnlyDirs: readOnly, workDirs })
+    const systemDenyPaths = collectSystemDenyPaths(HOME)
+    printDryRunTree({ home: HOME, blockedDirs, ignoredPaths, readOnlyDirs: readOnly, workDirs, systemDenyPaths })
     process.exit(0)
   }
 
