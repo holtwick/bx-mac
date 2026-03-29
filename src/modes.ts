@@ -1,5 +1,6 @@
 import { cpSync, existsSync, mkdirSync } from "node:fs"
 import { join } from "node:path"
+import { spawn } from "node:child_process"
 import process from "node:process"
 import type { AppDefinition } from "./config.js"
 import { resolveAppPath, BUILTIN_MODES, type BuiltinMode } from "./config.js"
@@ -7,6 +8,13 @@ import { resolveAppPath, BUILTIN_MODES, type BuiltinMode } from "./config.js"
 interface Command {
   bin: string
   args: string[]
+}
+
+function appBundleFromExecutablePath(path: string): string | null {
+  const marker = ".app/"
+  const idx = path.indexOf(marker)
+  if (idx < 0) return null
+  return path.slice(0, idx + ".app".length)
 }
 
 /**
@@ -87,4 +95,40 @@ export function buildCommand(
   }
 
   return { bin, args }
+}
+
+/**
+ * Best-effort app activation for GUI app modes.
+ * Runs outside the sandbox so macOS can bring the app to front.
+ */
+export function getActivationCommand(mode: string, apps: Record<string, AppDefinition>): Command | null {
+  if ((BUILTIN_MODES as readonly string[]).includes(mode)) return null
+
+  const app = apps[mode]
+  if (!app) return null
+
+  if (app.bundle) {
+    return { bin: "/usr/bin/open", args: ["-b", app.bundle] }
+  } else {
+    const bin = resolveAppPath(app)
+    if (!bin) return null
+    const bundlePath = appBundleFromExecutablePath(bin)
+    if (!bundlePath) return null
+    return { bin: "/usr/bin/open", args: ["-a", bundlePath] }
+  }
+}
+
+export function bringAppToFront(mode: string, apps: Record<string, AppDefinition>) {
+  const cmd = getActivationCommand(mode, apps)
+  if (!cmd) return
+
+  // Slight delay helps when app is still bootstrapping.
+  setTimeout(() => {
+    try {
+      const p = spawn(cmd.bin, cmd.args, { stdio: "ignore", detached: true })
+      p.unref()
+    } catch {
+      // Ignore activation failures (launch itself already happened).
+    }
+  }, 250)
 }

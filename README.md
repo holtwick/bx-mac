@@ -75,6 +75,8 @@ For app modes, values before `--` define the sandbox scope (`workdir...`). Value
 
 For `xcode`, this distinction is important: the sandbox workdir is **not** passed as an Xcode open argument. Use `--` if you want to open a specific `.xcworkspace` or `.xcodeproj`.
 
+GUI app modes are activated in the foreground on launch (best effort), so the opened app should become the frontmost app.
+
 ### Examples
 
 ```bash

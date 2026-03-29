@@ -7,7 +7,7 @@ import process from "node:process"
 import { checkOwnSandbox, checkVSCodeTerminal, checkExternalSandbox, checkWorkDirs } from "./guards.js"
 import { parseArgs } from "./args.js"
 import { PROTECTED_DOTDIRS, parseHomeConfig, collectBlockedDirs, collectIgnoredPaths, generateProfile } from "./profile.js"
-import { setupVSCodeProfile, buildCommand } from "./modes.js"
+import { setupVSCodeProfile, buildCommand, bringAppToFront } from "./modes.js"
 import { loadConfig, getAvailableApps, getValidModes } from "./config.js"
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
@@ -198,6 +198,8 @@ const child = spawn("sandbox-exec", [
   stdio: "inherit",
   env: { ...process.env, CODEBOX_SANDBOX: "1" },
 })
+
+bringAppToFront(mode, apps)
 
 child.on("close", (code: number | null) => {
   rmSync(profilePath, { force: true })

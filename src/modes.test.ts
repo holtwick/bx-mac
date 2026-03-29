@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest"
-import { buildCommand } from "./modes.js"
+import { buildCommand, getActivationCommand } from "./modes.js"
 import type { AppDefinition } from "./config.js"
 import { BUILTIN_APPS } from "./config.js"
 
@@ -73,5 +73,19 @@ describe("buildCommand", () => {
     expect(cmd.bin).toBe("/test/CustomApp")
     expect(cmd.args).toContain("--flag")
     expect(cmd.args).toContain("/work/a")
+  })
+})
+
+describe("getActivationCommand", () => {
+  it("returns open -b command when bundle id is available", () => {
+    const cmd = getActivationCommand("xcode", testApps)
+    expect(cmd).toEqual({
+      bin: "/usr/bin/open",
+      args: ["-b", "com.apple.dt.Xcode"],
+    })
+  })
+
+  it("returns null for builtin shell modes", () => {
+    expect(getActivationCommand("term", testApps)).toBeNull()
   })
 })
