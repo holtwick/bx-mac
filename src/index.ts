@@ -50,8 +50,18 @@ async function main() {
   const effectiveWorkArgs = implicit && app?.workdirs?.length ? app.workdirs : workArgs
   const workDirs = effectiveWorkArgs.map((a) => resolve(a.replace(/^~\//, HOME + "/")))
 
-  if (implicit && !app?.workdirs?.length && !dry) {
-    await confirmLaunch(workDirs[0], mode)
+  if (implicit && !app?.workdirs?.length) {
+    if (workDirs.some((d) => d === HOME)) {
+      console.error(`\n🚫 ${CYAN}bx${RESET} · no working directory specified and current directory is $HOME\n`)
+      console.error(`   ${DIM}Usage:${RESET}  bx ${mode} <workdir>`)
+      console.error(`   ${DIM}Config:${RESET} set default workdirs in ~/.bxconfig.toml:\n`)
+      console.error(`   ${DIM}[apps.${mode}]${RESET}`)
+      console.error(`   ${DIM}workdirs = ["~/work/my-project"]${RESET}\n`)
+      process.exit(1)
+    }
+    if (!dry) {
+      await confirmLaunch(workDirs[0], mode)
+    }
   }
 
   if (!dry) {
@@ -127,6 +137,11 @@ async function main() {
   })
 }
 
+// ANSI helpers
+const DIM = "\x1b[2m"
+const RESET = "\x1b[0m"
+const CYAN = "\x1b[36m"
+
 // --- Helpers ---
 
 async function confirmLaunch(workDir: string, mode: string) {
@@ -139,11 +154,6 @@ async function confirmLaunch(workDir: string, mode: string) {
     process.exit(0)
   }
 }
-
-// ANSI helpers
-const DIM = "\x1b[2m"
-const RESET = "\x1b[0m"
-const CYAN = "\x1b[36m"
 
 function printPolicySummary(
   mode: string,

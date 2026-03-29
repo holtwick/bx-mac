@@ -32,20 +32,18 @@ export function parseArgs(validModes: string[]): Args {
   // Determine mode and workdirs
   let mode = "code"
   let workArgs: string[]
-  let explicit = false
+  let implicitWorkdirs = false
 
   if (beforeDash.length > 0 && validModes.includes(beforeDash[0])) {
     mode = beforeDash[0]
     workArgs = beforeDash.slice(1)
-    explicit = true
   } else {
     workArgs = beforeDash
   }
 
   if (workArgs.length === 0) {
     workArgs = ["."]
-  } else {
-    explicit = true
+    implicitWorkdirs = true
   }
 
   if (mode === "exec" && appArgs.length === 0) {
@@ -54,5 +52,5 @@ export function parseArgs(validModes: string[]): Args {
     process.exit(1)
   }
 
-  return { mode, workArgs, verbose, dry, profileSandbox, appArgs, implicit: !explicit }
+  return { mode, workArgs, verbose, dry, profileSandbox, appArgs, implicit: implicitWorkdirs }
 }
