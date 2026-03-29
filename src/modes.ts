@@ -32,7 +32,7 @@ export function buildCommand(
   workDirs: string[],
   home: string,
   profileSandbox: boolean,
-  execCmd: string[],
+  appArgs: string[],
   apps: Record<string, AppDefinition>,
 ): Command {
   // Built-in shell modes
@@ -46,7 +46,7 @@ export function buildCommand(
         return { bin: "claude", args: [] }
       }
       case "exec": {
-        return { bin: execCmd[0], args: execCmd.slice(1) }
+        return { bin: appArgs[0], args: appArgs.slice(1) }
       }
     }
   }
@@ -78,8 +78,13 @@ export function buildCommand(
   // App-specific extra args
   if (app.args) args.push(...app.args)
 
-  // Workdirs
-  args.push(...workDirs)
+  // Optional CLI app args after "--" (e.g. bx xcode <workdir> -- MyApp.xcworkspace)
+  if (appArgs.length > 0) args.push(...appArgs)
+
+  // Workdirs: for Xcode we keep workdirs purely as sandbox scope, not as launch args.
+  if (mode !== "xcode") {
+    args.push(...workDirs)
+  }
 
   return { bin, args }
 }

@@ -26,7 +26,7 @@ if (process.argv.includes("--help") || process.argv.includes("-h")) {
   const helpConfig = loadConfig(HOME)
   const helpApps = getAvailableApps(helpConfig)
   const appLines = Object.keys(helpApps)
-    .map((name) => `  bx ${name} [workdir...]${" ".repeat(Math.max(1, 33 - name.length - 16))}${name} (app)`)
+    .map((name) => `  bx ${name} [workdir...] [-- app-args...]${" ".repeat(Math.max(1, 33 - name.length - 33))}${name} (app)`)
     .join("\n")
 
   console.log(`bx ${VERSION} — launch apps in a macOS sandbox
@@ -69,7 +69,7 @@ const config = loadConfig(HOME)
 const apps = getAvailableApps(config)
 const validModes = getValidModes(apps)
 
-const { mode, workArgs, verbose, dry, profileSandbox, execCmd, implicit } = parseArgs(validModes)
+const { mode, workArgs, verbose, dry, profileSandbox, appArgs, implicit } = parseArgs(validModes)
 const WORK_DIRS = workArgs.map((a) => resolve(a))
 
 // --- Confirm when invoked without arguments ---
@@ -185,7 +185,7 @@ if (dry) {
 const profilePath = join("/tmp", `bx-${process.pid}.sb`)
 writeFileSync(profilePath, profile)
 
-const cmd = buildCommand(mode, WORK_DIRS, HOME, profileSandbox, execCmd, apps)
+const cmd = buildCommand(mode, WORK_DIRS, HOME, profileSandbox, appArgs, apps)
 
 const child = spawn("sandbox-exec", [
   "-f", profilePath,

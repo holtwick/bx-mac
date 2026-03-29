@@ -6,7 +6,7 @@ export interface Args {
   verbose: boolean
   dry: boolean
   profileSandbox: boolean
-  execCmd: string[]
+  appArgs: string[]
   implicit: boolean
 }
 
@@ -22,9 +22,9 @@ export function parseArgs(validModes: string[]): Args {
   const profileSandbox = rawArgs.includes("--profile-sandbox")
   const positional = rawArgs.filter((a) => !a.startsWith("--"))
 
-  // Split at "--" for exec mode
+  // Split at "--" for app arguments (also used by exec mode)
   const doubleDashIdx = rawArgs.indexOf("--")
-  const execCmd = doubleDashIdx >= 0 ? rawArgs.slice(doubleDashIdx + 1) : []
+  const appArgs = doubleDashIdx >= 0 ? rawArgs.slice(doubleDashIdx + 1) : []
   const beforeDash = doubleDashIdx >= 0
     ? rawArgs.slice(0, doubleDashIdx).filter((a) => !a.startsWith("--"))
     : positional
@@ -48,11 +48,11 @@ export function parseArgs(validModes: string[]): Args {
     explicit = true
   }
 
-  if (mode === "exec" && execCmd.length === 0) {
+  if (mode === "exec" && appArgs.length === 0) {
     console.error("sandbox: exec mode requires a command after \"--\"")
     console.error("usage: bx exec [workdir...] -- command [args...]")
     process.exit(1)
   }
 
-  return { mode, workArgs, verbose, dry, profileSandbox, execCmd, implicit: !explicit }
+  return { mode, workArgs, verbose, dry, profileSandbox, appArgs, implicit: !explicit }
 }

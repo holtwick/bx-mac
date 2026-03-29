@@ -29,19 +29,20 @@ pnpm link -g      # install "bx" command globally
 ```bash
 bx [workdir]                                # VSCode (default mode)
 bx code [workdir]                           # VSCode (explicit)
-bx xcode [workdir]                          # Xcode
+bx xcode [workdir] [-- project-or-workspace] # Xcode
 bx term [workdir]                           # sandboxed login shell
 bx claude [workdir]                         # Claude Code CLI
 bx exec [workdir] -- command [args...]      # arbitrary command
 
 # Custom apps from ~/.bxconfig.toml become modes automatically:
-bx cursor [workdir]                         # if configured
+bx cursor [workdir] [-- app-args...]       # if configured
 bx zed [workdir]                            # if configured
 
 # Options (work with all modes)
 bx --dry ~/work/my-project                  # show what will be protected
 bx --verbose term ~/work/my-project         # print generated .sb profile
 bx code --profile-sandbox ~/work/my-project # isolated VSCode profile
+bx xcode ~/work/my-ios-app -- MyApp.xcworkspace # sandbox dir + explicit open target
 ```
 
 ### Configuration files

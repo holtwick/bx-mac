@@ -63,13 +63,17 @@ pnpm link -g
 | --- | --- |
 | `bx [workdir...]` | 🖥️ VSCode (default) |
 | `bx code [workdir...]` | 🖥️ VSCode (explicit) |
-| `bx xcode [workdir...]` | 🛠️ Xcode |
+| `bx xcode [workdir...] [-- project-or-workspace]` | 🛠️ Xcode |
 | `bx term [workdir...]` | 💻 Sandboxed login shell (`$SHELL -l`) |
 | `bx claude [workdir...]` | 🤖 Claude Code CLI |
 | `bx exec [workdir...] -- cmd` | ⚡ Any command you want |
-| `bx <app> [workdir...]` | 🔌 Any app from `~/.bxconfig.toml` |
+| `bx <app> [workdir...] [-- app-args...]` | 🔌 Any app from `~/.bxconfig.toml` |
 
 If no directory is given, the current directory is used. All modes accept multiple directories.
+
+For app modes, values before `--` define the sandbox scope (`workdir...`). Values after `--` are passed to the app as launch arguments.
+
+For `xcode`, this distinction is important: the sandbox workdir is **not** passed as an Xcode open argument. Use `--` if you want to open a specific `.xcworkspace` or `.xcodeproj`.
 
 ### Examples
 
@@ -86,8 +90,11 @@ bx term ~/work/my-project
 # 🤖 Let Claude Code work on a project — nothing else visible
 bx claude ~/work/my-project
 
-# 🛠️ Xcode (built-in)
+# 🛠️ Xcode (built-in) — sandbox only, open picker/restore state
 bx xcode ~/work/my-ios-app
+
+# 🛠️ Xcode with explicit project/workspace to open
+bx xcode ~/work/my-ios-app -- MyApp.xcworkspace
 
 # 🔌 Custom apps from ~/.bxconfig.toml
 bx cursor ~/work/my-project

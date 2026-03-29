@@ -76,7 +76,15 @@ describe("parseArgs", () => {
     const result = parseArgs(ALL_MODES)
     expect(result.mode).toBe("exec")
     expect(result.workArgs).toEqual(["/tmp/project"])
-    expect(result.execCmd).toEqual(["python", "train.py"])
+    expect(result.appArgs).toEqual(["python", "train.py"])
+  })
+
+  it("parses app arguments after -- for app modes", () => {
+    argv("xcode", "/tmp/project", "--", "MyApp.xcworkspace")
+    const result = parseArgs(ALL_MODES)
+    expect(result.mode).toBe("xcode")
+    expect(result.workArgs).toEqual(["/tmp/project"])
+    expect(result.appArgs).toEqual(["MyApp.xcworkspace"])
   })
 
   it("parses --verbose flag", () => {

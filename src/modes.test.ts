@@ -55,10 +55,17 @@ describe("buildCommand", () => {
     expect(cmd.args).toEqual(["train.py"])
   })
 
-  it("xcode mode resolves app path", () => {
+  it("xcode mode resolves app path without opening workdir by default", () => {
     const cmd = buildCommand("xcode", ["/work/project"], home, false, [], testApps)
     expect(cmd.bin).toBe("/test/Xcode")
-    expect(cmd.args).toContain("/work/project")
+    expect(cmd.args).not.toContain("/work/project")
+  })
+
+  it("xcode mode accepts explicit open target after --", () => {
+    const cmd = buildCommand("xcode", ["/work/project"], home, false, ["MyApp.xcworkspace"], testApps)
+    expect(cmd.bin).toBe("/test/Xcode")
+    expect(cmd.args).toContain("MyApp.xcworkspace")
+    expect(cmd.args).not.toContain("/work/project")
   })
 
   it("custom app mode uses path and args", () => {
