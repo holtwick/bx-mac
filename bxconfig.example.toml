@@ -1,7 +1,8 @@
 # ~/.bxconfig.toml — bx app configuration
 #
 # Define applications that can be launched in the sandbox.
-# Each [apps.<name>] section becomes available as: bx <name> [workdir...]
+# Each [<name>] section becomes available as: bx <name> [workdir...]
+# The [apps.<name>] prefix also works for backward compatibility.
 #
 # Resolution order for finding the app executable:
 #   1. path    — explicit absolute path (highest priority)
@@ -11,7 +12,7 @@
 
 # --- Built-in apps (these are the defaults, override as needed) ---
 
-[apps.code]
+[code]
   bundle = "com.microsoft.VSCode"
   binary = "Contents/MacOS/Electron"
   fallback = "/Applications/Visual Studio Code.app/Contents/MacOS/Electron"
@@ -20,7 +21,7 @@
   ]
   # workdirs = ["~/work/project-a", "~/work/shared-lib"]
 
-[apps.xcode]
+[xcode]
   bundle = "com.apple.dt.Xcode"
   binary = "Contents/MacOS/Xcode"
   fallback = "/Applications/Xcode.app/Contents/MacOS/Xcode"
@@ -34,31 +35,31 @@
 
 # --- Examples for additional apps ---
 
-# [apps.cursor]
+# [cursor]
 # bundle = "com.todesktop.230313mzl4w4u92"
 # binary = "Contents/MacOS/Cursor"
 # args = ["--no-sandbox"]
 # passWorkdirs = true
 # workdirs = ["~/work/project-b"]
 
-# [apps.zed]
+# [zed]
 # bundle = "dev.zed.Zed"
 # binary = "Contents/MacOS/zed"
 
-# [apps.fleet]
+# [fleet]
 # path = "/Applications/Fleet.app/Contents/MacOS/Fleet"
 
-# [apps.sublime]
+# [sublime]
 # bundle = "com.sublimetext.4"
 # binary = "Contents/MacOS/sublime_text"
 
 # --- Workdir shortcuts (inherit from another app via mode) ---
 # Only workdirs needed — everything else is inherited from the referenced app.
 
-# [apps.myproject]
+# [myproject]
 # mode = "code"
 # workdirs = ["~/work/my-project", "~/work/shared-lib"]
 
-# [apps.ios]
+# [ios]
 # mode = "xcode"
 # workdirs = ["~/work/my-ios-app"]

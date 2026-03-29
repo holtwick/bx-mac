@@ -47,25 +47,25 @@ bx xcode ~/work/my-ios-app -- MyApp.xcworkspace # sandbox dir + explicit open ta
 
 ### Configuration files
 
-**`~/.bxconfig.toml`** — App definitions (TOML format). Each `[apps.<name>]` section becomes a mode usable as `bx <name> [workdir...]`. Built-in apps (`code`, `xcode`) are always available and can be overridden here.
+**`~/.bxconfig.toml`** — App definitions (TOML format). Each `[<name>]` section becomes a mode usable as `bx <name> [workdir...]`. Built-in apps (`code`, `xcode`) are always available and can be overridden here.
 
 ```toml
 # Override built-in app path
-[apps.code]
+[code]
 path = "/usr/local/bin/code"
 
 # Add a new app (auto-discovered via bundle ID)
-[apps.cursor]
+[cursor]
 bundle = "com.todesktop.230313mzl4w4u92"
 binary = "Contents/MacOS/Cursor"
 args = ["--no-sandbox"]
 
 # Add a new app (explicit path, no discovery)
-[apps.zed]
+[zed]
 path = "/Applications/Zed.app/Contents/MacOS/zed"
 
 # Workdir shortcut — inherits everything from "code"
-[apps.myproject]
+[myproject]
 mode = "code"
 workdirs = ["~/work/my-project", "~/work/shared-lib"]
 ```

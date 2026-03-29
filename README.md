@@ -134,21 +134,21 @@ On normal runs, bx also prints a short policy summary (number of workdirs, block
 
 ### `~/.bxconfig.toml`
 
-App definitions in TOML format. Each `[apps.<name>]` section becomes a CLI mode — use it as `bx <name> [workdir...]`. Built-in apps (`code`, `xcode`) are always available and can be overridden.
+App definitions in TOML format. Each `[<name>]` section becomes a CLI mode — use it as `bx <name> [workdir...]`. Built-in apps (`code`, `xcode`) are always available and can be overridden.
 
 ```toml
 # Add Cursor (auto-discovered via macOS Spotlight)
-[apps.cursor]
+[cursor]
 bundle = "com.todesktop.230313mzl4w4u92"
 binary = "Contents/MacOS/Cursor"
 args = ["--no-sandbox"]
 
 # Add Zed (explicit path, no discovery)
-[apps.zed]
+[zed]
 path = "/Applications/Zed.app/Contents/MacOS/zed"
 
 # Override built-in VSCode path
-[apps.code]
+[code]
 path = "/usr/local/bin/code"
 ```
 
@@ -171,12 +171,12 @@ path = "/usr/local/bin/code"
 
 ```toml
 # "bx myproject" opens VSCode with these directories
-[apps.myproject]
+[myproject]
 mode = "code"
 workdirs = ["~/work/my-project", "~/work/shared-lib"]
 
 # "bx ios" opens Xcode with this directory
-[apps.ios]
+[ios]
 mode = "xcode"
 workdirs = ["~/work/my-ios-app"]
 ```
@@ -186,7 +186,7 @@ Running `bx myproject` inherits VSCode's bundle, binary, args, and everything el
 **Preconfigured workdirs** also work directly on app definitions:
 
 ```toml
-[apps.code]
+[code]
 workdirs = ["~/work/my-project", "~/work/shared-lib"]
 ```
 
@@ -329,7 +329,7 @@ bx code ~/work/project-a ~/work/project-b
 Or preconfigure them in `~/.bxconfig.toml`:
 
 ```toml
-[apps.code]
+[code]
 workdirs = ["~/work/project-a", "~/work/project-b"]
 ```
 

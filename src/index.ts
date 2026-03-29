@@ -56,7 +56,7 @@ async function main() {
       console.error(`\n${fmt.error("no working directory specified and current directory is $HOME")}\n`)
       console.error(fmt.detail(`Usage:  bx ${mode} <workdir>`))
       console.error(fmt.detail(`Config: set default workdirs in ~/.bxconfig.toml:\n`))
-      console.error(fmt.detail(`[apps.${mode}]`))
+      console.error(fmt.detail(`[${mode}]`))
       console.error(fmt.detail(`workdirs = ["~/work/my-project"]\n`))
       process.exit(1)
     }

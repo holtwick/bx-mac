@@ -47,6 +47,19 @@ export interface BxConfig {
   apps: Record<string, AppDefinition>
 }
 
+function parseAppDef(def: Record<string, unknown>): AppDefinition {
+  return {
+    mode: typeof def.mode === "string" ? def.mode : undefined,
+    bundle: typeof def.bundle === "string" ? def.bundle : undefined,
+    binary: typeof def.binary === "string" ? def.binary : undefined,
+    path: typeof def.path === "string" ? def.path : undefined,
+    fallback: typeof def.fallback === "string" ? def.fallback : undefined,
+    args: Array.isArray(def.args) ? def.args.filter((a): a is string => typeof a === "string") : undefined,
+    passWorkdirs: typeof def.passWorkdirs === "boolean" ? def.passWorkdirs : undefined,
+    workdirs: Array.isArray(def.workdirs) ? def.workdirs.filter((a): a is string => typeof a === "string") : undefined,
+  }
+}
+
 /**
  * Load and parse ~/.bxconfig.toml. Returns empty apps if file missing or invalid.
  */
@@ -59,19 +72,26 @@ export function loadConfig(home: string): BxConfig {
     const doc = parseToml(raw) as Record<string, unknown>
     const apps: Record<string, AppDefinition> = {}
 
-    if (doc.apps && typeof doc.apps === "object") {
-      for (const [name, def] of Object.entries(doc.apps as Record<string, Record<string, unknown>>)) {
-        apps[name] = {
-          mode: typeof def.mode === "string" ? def.mode : undefined,
-          bundle: typeof def.bundle === "string" ? def.bundle : undefined,
-          binary: typeof def.binary === "string" ? def.binary : undefined,
-          path: typeof def.path === "string" ? def.path : undefined,
-          fallback: typeof def.fallback === "string" ? def.fallback : undefined,
-          args: Array.isArray(def.args) ? def.args.filter((a): a is string => typeof a === "string") : undefined,
-          passWorkdirs: typeof def.passWorkdirs === "boolean" ? def.passWorkdirs : undefined,
-          workdirs: Array.isArray(def.workdirs) ? def.workdirs.filter((a): a is string => typeof a === "string") : undefined,
+    // Collect app sections: top-level [name] and nested [apps.name] both work.
+    // [apps.name] takes precedence over [name] if both exist.
+    const sections: Record<string, Record<string, unknown>> = {}
+
+    const APP_FIELDS = new Set(["mode", "bundle", "binary", "path", "fallback", "args", "passWorkdirs", "workdirs"])
+    for (const [key, val] of Object.entries(doc)) {
+      if (key === "apps") continue
+      if (val && typeof val === "object" && !Array.isArray(val)) {
+        const obj = val as Record<string, unknown>
+        if (Object.keys(obj).some((k) => APP_FIELDS.has(k))) {
+          sections[key] = obj
         }
       }
+    }
+    if (doc.apps && typeof doc.apps === "object") {
+      Object.assign(sections, doc.apps as Record<string, Record<string, unknown>>)
+    }
+
+    for (const [name, def] of Object.entries(sections)) {
+      apps[name] = parseAppDef(def)
     }
 
     return { apps }

@@ -66,6 +66,42 @@ path = "/Applications/Zed.app/Contents/MacOS/zed"
     spy.mockRestore()
   })
 
+  it("parses top-level sections as apps", () => {
+    setConfig(`
+[cursor]
+bundle = "com.todesktop.230313mzl4w4u92"
+binary = "Contents/MacOS/Cursor"
+`)
+    const config = loadConfig("/Users/test")
+    expect(config.apps.cursor?.bundle).toBe("com.todesktop.230313mzl4w4u92")
+    expect(config.apps.cursor?.binary).toBe("Contents/MacOS/Cursor")
+  })
+
+  it("apps section takes precedence over top-level", () => {
+    setConfig(`
+[cursor]
+path = "/from-top-level"
+
+[apps.cursor]
+path = "/from-apps"
+`)
+    const config = loadConfig("/Users/test")
+    expect(config.apps.cursor?.path).toBe("/from-apps")
+  })
+
+  it("mixes top-level and apps sections", () => {
+    setConfig(`
+[zed]
+path = "/Applications/Zed.app/Contents/MacOS/zed"
+
+[apps.cursor]
+bundle = "com.cursor"
+`)
+    const config = loadConfig("/Users/test")
+    expect(config.apps.zed?.path).toBe("/Applications/Zed.app/Contents/MacOS/zed")
+    expect(config.apps.cursor?.bundle).toBe("com.cursor")
+  })
+
   it("handles config without apps section", () => {
     setConfig(`
 [other]
