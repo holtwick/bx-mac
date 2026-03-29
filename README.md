@@ -55,7 +55,7 @@ pnpm install && pnpm build
 pnpm link -g
 ```
 
-**Requirements:** macOS (tested on Sequoia 15), Node.js >= 22
+**Requirements:** macOS (only tested on Tahoe 26.4, feedback welcome), Node.js >= 22
 
 ## 🚀 Modes
 
