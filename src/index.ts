@@ -8,6 +8,7 @@ import { checkOwnSandbox, checkVSCodeTerminal, checkExternalSandbox, checkWorkDi
 import { parseArgs } from "./args.js"
 import { PROTECTED_DOTDIRS, parseHomeConfig, collectBlockedDirs, collectIgnoredPaths, generateProfile } from "./profile.js"
 import { setupVSCodeProfile, buildCommand } from "./modes.js"
+import { loadConfig, getAvailableApps, getValidModes } from "./config.js"
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 
@@ -21,11 +22,18 @@ if (process.argv.includes("--version") || process.argv.includes("-v")) {
 }
 
 if (process.argv.includes("--help") || process.argv.includes("-h")) {
+  const HOME = process.env.HOME!
+  const helpConfig = loadConfig(HOME)
+  const helpApps = getAvailableApps(helpConfig)
+  const appLines = Object.keys(helpApps)
+    .map((name) => `  bx ${name} [workdir...]${" ".repeat(Math.max(1, 33 - name.length - 16))}${name} (app)`)
+    .join("\n")
+
   console.log(`bx ${VERSION} — launch apps in a macOS sandbox
 
 Usage:
   bx [workdir...]                            VSCode (default)
-  bx code [workdir...]                       VSCode
+${appLines}
   bx term [workdir...]                       sandboxed login shell
   bx claude [workdir...]                     Claude Code CLI
   bx exec [workdir...] -- command [args...]  arbitrary command
@@ -38,6 +46,13 @@ Options:
   -h, --help           show this help
 
 Configuration:
+  ~/.bxconfig.toml     app definitions (TOML):
+                         [apps.name]           add a new app
+                         bundle = "..."         macOS bundle ID (auto-discovery)
+                         binary = "..."         relative path in .app bundle
+                         path = "..."           explicit executable path
+                         args = ["..."]         extra arguments
+                       built-in apps (code, xcode) can be overridden
   ~/.bxignore          sandbox rules (one per line):
                          path         block access (deny)
                          rw:path      allow read-write access
@@ -48,17 +63,20 @@ https://github.com/holtwick/bx-mac`)
   process.exit(0)
 }
 
-// --- Parse arguments ---
-const { mode, workArgs, verbose, dry, profileSandbox, execCmd, implicit } = parseArgs()
-
+// --- Load config and parse arguments ---
 const HOME = process.env.HOME!
+const config = loadConfig(HOME)
+const apps = getAvailableApps(config)
+const validModes = getValidModes(apps)
+
+const { mode, workArgs, verbose, dry, profileSandbox, execCmd, implicit } = parseArgs(validModes)
 const WORK_DIRS = workArgs.map((a) => resolve(a))
 
 // --- Confirm when invoked without arguments ---
 if (implicit && !dry) {
   const rl = createInterface({ input: process.stdin, output: process.stderr })
   const answer = await new Promise<string>((res) => {
-    rl.question(`sandbox: open ${WORK_DIRS[0]} in VSCode? [Y/n] `, res)
+    rl.question(`sandbox: open ${WORK_DIRS[0]} in ${mode}? [Y/n] `, res)
   })
   rl.close()
   if (answer && !answer.match(/^y(es)?$/i)) {
@@ -167,7 +185,7 @@ if (dry) {
 const profilePath = join("/tmp", `bx-${process.pid}.sb`)
 writeFileSync(profilePath, profile)
 
-const cmd = buildCommand(mode, WORK_DIRS, HOME, profileSandbox, execCmd)
+const cmd = buildCommand(mode, WORK_DIRS, HOME, profileSandbox, execCmd, apps)
 
 const child = spawn("sandbox-exec", [
   "-f", profilePath,

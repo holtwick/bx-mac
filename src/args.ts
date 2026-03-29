@@ -1,10 +1,7 @@
 import process from "node:process"
 
-export const MODES = ["code", "term", "claude", "exec"] as const
-export type Mode = (typeof MODES)[number]
-
 export interface Args {
-  mode: Mode
+  mode: string
   workArgs: string[]
   verbose: boolean
   dry: boolean
@@ -13,7 +10,11 @@ export interface Args {
   implicit: boolean
 }
 
-export function parseArgs(): Args {
+/**
+ * Parse CLI arguments. `validModes` is the list of recognized mode names
+ * (builtin modes + app names from config).
+ */
+export function parseArgs(validModes: string[]): Args {
   const rawArgs = process.argv.slice(2)
 
   const verbose = rawArgs.includes("--verbose")
@@ -29,12 +30,12 @@ export function parseArgs(): Args {
     : positional
 
   // Determine mode and workdirs
-  let mode: Mode = "code"
+  let mode = "code"
   let workArgs: string[]
   let explicit = false
 
-  if (beforeDash.length > 0 && MODES.includes(beforeDash[0] as Mode)) {
-    mode = beforeDash[0] as Mode
+  if (beforeDash.length > 0 && validModes.includes(beforeDash[0])) {
+    mode = beforeDash[0]
     workArgs = beforeDash.slice(1)
     explicit = true
   } else {

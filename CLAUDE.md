@@ -9,6 +9,10 @@ This repository contains a macOS sandbox solution to launch applications in a pr
 ## Files
 
 - **`src/index.ts`** — Main source (TypeScript). Scans `$HOME`, generates a sandbox profile dynamically, and launches the target application inside `sandbox-exec`.
+- **`src/config.ts`** — App configuration: TOML config loading, built-in app definitions, auto-discovery via `mdfind`.
+- **`src/args.ts`** — CLI argument parsing with dynamic mode validation.
+- **`src/modes.ts`** — Command building for all modes (shell builtins + configured apps).
+- **`bxconfig.example.toml`** — Example config with all built-in apps and common extras.
 - **`rolldown.config.ts`** — Rolldown bundler config. Builds `dist/bx.js` (ESM, Node shebang).
 - **`dist/bx.js`** — Built CLI entry point (generated, not committed).
 
@@ -25,9 +29,14 @@ pnpm link -g      # install "bx" command globally
 ```bash
 bx [workdir]                                # VSCode (default mode)
 bx code [workdir]                           # VSCode (explicit)
+bx xcode [workdir]                          # Xcode
 bx term [workdir]                           # sandboxed login shell
 bx claude [workdir]                         # Claude Code CLI
 bx exec [workdir] -- command [args...]      # arbitrary command
+
+# Custom apps from ~/.bxconfig.toml become modes automatically:
+bx cursor [workdir]                         # if configured
+bx zed [workdir]                            # if configured
 
 # Options (work with all modes)
 bx --dry ~/work/my-project                  # show what will be protected
@@ -37,9 +46,39 @@ bx code --profile-sandbox ~/work/my-project # isolated VSCode profile
 
 ### Configuration files
 
-All config files use one entry per line. Empty lines and `#` comments are ignored.
+**`~/.bxconfig.toml`** — App definitions (TOML format). Each `[apps.<name>]` section becomes a mode usable as `bx <name> [workdir...]`. Built-in apps (`code`, `xcode`) are always available and can be overridden here.
 
-**`~/.bxignore`** — Unified sandbox rules (paths relative to `$HOME`):
+```toml
+# Override built-in app path
+[apps.code]
+path = "/usr/local/bin/code"
+
+# Add a new app (auto-discovered via bundle ID)
+[apps.cursor]
+bundle = "com.todesktop.230313mzl4w4u92"
+binary = "Contents/MacOS/Cursor"
+args = ["--no-sandbox"]
+
+# Add a new app (explicit path, no discovery)
+[apps.zed]
+path = "/Applications/Zed.app/Contents/MacOS/zed"
+```
+
+Available fields per app:
+
+| Field | Description |
+| --- | --- |
+| `path` | Explicit absolute path to the executable (highest priority) |
+| `bundle` | macOS bundle identifier for auto-discovery via `mdfind` |
+| `binary` | Relative path to executable inside the `.app` bundle |
+| `fallback` | Absolute fallback path if discovery fails |
+| `args` | Extra arguments always passed to the app |
+
+App resolution order: `path` (explicit) → `bundle` + `binary` (mdfind auto-discovery) → `fallback` (hardcoded). See `bxconfig.example.toml` for all options.
+
+When overriding a built-in app, only the fields you specify are replaced — the rest (e.g. `bundle`, `args`) are kept from the built-in definition.
+
+**`~/.bxignore`** — Unified sandbox rules (paths relative to `$HOME`). One entry per line, empty lines and `#` comments are ignored:
 
 ```gitignore
 # Block sensitive paths (default, no prefix)
@@ -114,7 +153,7 @@ The solution is a **blocklist**: individually deny only the directories that sho
 ### What is protected
 
 | Path | Access |
-|---|---|
+| --- | --- |
 | `~/Documents`, `~/Desktop`, `~/Downloads`, ... | **blocked** |
 | Other projects (siblings of working dir) | **blocked** |
 | Working directory | **full** |

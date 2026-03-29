@@ -60,12 +60,14 @@ pnpm link -g
 ## 🚀 Modes
 
 | Command | What it launches |
-|---|---|
+| --- | --- |
 | `bx [workdir...]` | 🖥️ VSCode (default) |
 | `bx code [workdir...]` | 🖥️ VSCode (explicit) |
+| `bx xcode [workdir...]` | 🛠️ Xcode |
 | `bx term [workdir...]` | 💻 Sandboxed login shell (`$SHELL -l`) |
 | `bx claude [workdir...]` | 🤖 Claude Code CLI |
 | `bx exec [workdir...] -- cmd` | ⚡ Any command you want |
+| `bx <app> [workdir...]` | 🔌 Any app from `~/.bxconfig.toml` |
 
 If no directory is given, the current directory is used. All modes accept multiple directories.
 
@@ -84,6 +86,13 @@ bx term ~/work/my-project
 # 🤖 Let Claude Code work on a project — nothing else visible
 bx claude ~/work/my-project
 
+# 🛠️ Xcode (built-in)
+bx xcode ~/work/my-ios-app
+
+# 🔌 Custom apps from ~/.bxconfig.toml
+bx cursor ~/work/my-project
+bx zed ~/work/my-project
+
 # ⚡ Run a script in a sandbox
 bx exec ~/work/my-project -- python train.py
 
@@ -97,14 +106,46 @@ bx --verbose ~/work/my-project
 ## ⚙️ Options
 
 | Option | Description |
-|---|---|
+| --- | --- |
 | `--dry` | Show a tree of all protected, read-only, and accessible paths — don't launch anything |
 | `--verbose` | Print the generated sandbox profile to stderr |
 | `--profile-sandbox` | Use an isolated VSCode profile (separate extensions/settings, `code` mode only) |
 
 ## 📝 Configuration
 
-bx uses two optional config files — one entry per line, `#` for comments. Project `.bxignore` files are discovered recursively.
+### `~/.bxconfig.toml`
+
+App definitions in TOML format. Each `[apps.<name>]` section becomes a CLI mode — use it as `bx <name> [workdir...]`. Built-in apps (`code`, `xcode`) are always available and can be overridden.
+
+```toml
+# Add Cursor (auto-discovered via macOS Spotlight)
+[apps.cursor]
+bundle = "com.todesktop.230313mzl4w4u92"
+binary = "Contents/MacOS/Cursor"
+args = ["--no-sandbox"]
+
+# Add Zed (explicit path, no discovery)
+[apps.zed]
+path = "/Applications/Zed.app/Contents/MacOS/zed"
+
+# Override built-in VSCode path
+[apps.code]
+path = "/usr/local/bin/code"
+```
+
+| Field | Description |
+| --- | --- |
+| `bundle` | macOS bundle identifier — used with `mdfind` to find the app automatically |
+| `binary` | Relative path to the executable inside the `.app` bundle |
+| `path` | Absolute path to the executable (highest priority, skips discovery) |
+| `fallback` | Absolute fallback path if `mdfind` discovery fails |
+| `args` | Extra arguments always passed to the app |
+
+**Resolution order:** `path` → `mdfind` by `bundle` + `binary` → `fallback`
+
+When overriding a built-in app, only the specified fields are replaced — unset fields keep their defaults. See [`bxconfig.example.toml`](bxconfig.example.toml) for a complete reference.
+
+> **💡 Finding a bundle ID:** Run `osascript -e 'id of app "AppName"'` to get the bundle ID of any installed app. Using `bundle` instead of `path` is recommended — it survives app updates, relocations, and name changes.
 
 ### `~/.bxignore`
 
@@ -135,7 +176,7 @@ Deny rules are applied **in addition** to the built-in protected list:
 Block paths within the working directory. Uses [`.gitignore`-style pattern matching](https://git-scm.com/docs/gitignore#_pattern_format):
 
 | Pattern | Matches | Why |
-|---|---|---|
+| --- | --- | --- |
 | `.env` | `.env` at any depth | No `/` → recursive |
 | `.env.*` | `.env.local`, `sub/.env.production` | No `/` → recursive |
 | `*.pem` | `key.pem`, `sub/deep/cert.pem` | No `/` → recursive |

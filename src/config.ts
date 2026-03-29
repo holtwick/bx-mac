@@ -1,0 +1,147 @@
+import { readFileSync, existsSync } from "node:fs"
+import { execFileSync } from "node:child_process"
+import { join } from "node:path"
+import { parse as parseToml } from "smol-toml"
+
+export interface AppDefinition {
+  /** macOS bundle identifier for mdfind discovery */
+  bundle?: string
+  /** Relative path to executable inside .app bundle */
+  binary?: string
+  /** Absolute path to executable (user override, highest priority) */
+  path?: string
+  /** Absolute path fallback if discovery fails */
+  fallback?: string
+  /** Extra args always passed to the app */
+  args?: string[]
+}
+
+/** Built-in app definitions — always available, can be overridden via config */
+export const BUILTIN_APPS: Record<string, AppDefinition> = {
+  code: {
+    bundle: "com.microsoft.VSCode",
+    binary: "Contents/MacOS/Electron",
+    fallback: "/Applications/Visual Studio Code.app/Contents/MacOS/Electron",
+    args: ["--no-sandbox"],
+  },
+  xcode: {
+    bundle: "com.apple.dt.Xcode",
+    binary: "Contents/MacOS/Xcode",
+    fallback: "/Applications/Xcode.app/Contents/MacOS/Xcode",
+  },
+}
+
+/** Shell-only built-in modes that are not app definitions */
+export const BUILTIN_MODES = ["term", "claude", "exec"] as const
+export type BuiltinMode = (typeof BUILTIN_MODES)[number]
+
+export interface BxConfig {
+  apps: Record<string, AppDefinition>
+}
+
+/**
+ * Load and parse ~/.bxconfig.toml. Returns empty apps if file missing or invalid.
+ */
+export function loadConfig(home: string): BxConfig {
+  const configPath = join(home, ".bxconfig.toml")
+  if (!existsSync(configPath)) return { apps: {} }
+
+  try {
+    const raw = readFileSync(configPath, "utf-8")
+    const doc = parseToml(raw) as Record<string, unknown>
+    const apps: Record<string, AppDefinition> = {}
+
+    if (doc.apps && typeof doc.apps === "object") {
+      for (const [name, def] of Object.entries(doc.apps as Record<string, Record<string, unknown>>)) {
+        apps[name] = {
+          bundle: typeof def.bundle === "string" ? def.bundle : undefined,
+          binary: typeof def.binary === "string" ? def.binary : undefined,
+          path: typeof def.path === "string" ? def.path : undefined,
+          fallback: typeof def.fallback === "string" ? def.fallback : undefined,
+          args: Array.isArray(def.args) ? def.args.filter((a): a is string => typeof a === "string") : undefined,
+        }
+      }
+    }
+
+    return { apps }
+  } catch (err) {
+    console.error(`sandbox: warning: failed to parse ${configPath}: ${err instanceof Error ? err.message : err}`)
+    return { apps: {} }
+  }
+}
+
+/**
+ * Merge built-in apps with user config (config wins on conflict).
+ */
+export function getAvailableApps(config: BxConfig): Record<string, AppDefinition> {
+  const merged: Record<string, AppDefinition> = {}
+
+  for (const [name, def] of Object.entries(BUILTIN_APPS)) {
+    merged[name] = { ...def }
+  }
+
+  for (const [name, def] of Object.entries(config.apps)) {
+    if (merged[name]) {
+      // Config overrides individual fields, keeping builtin defaults for unset fields
+      merged[name] = { ...merged[name], ...stripUndefined(def) }
+    } else {
+      merged[name] = def
+    }
+  }
+
+  return merged
+}
+
+function stripUndefined(obj: Record<string, unknown>): Record<string, unknown> {
+  const result: Record<string, unknown> = {}
+  for (const [k, v] of Object.entries(obj)) {
+    if (v !== undefined) result[k] = v
+  }
+  return result
+}
+
+/**
+ * Get all valid mode names (builtin modes + app names).
+ */
+export function getValidModes(apps: Record<string, AppDefinition>): string[] {
+  return [...BUILTIN_MODES, ...Object.keys(apps)]
+}
+
+/**
+ * Resolve an AppDefinition to an executable path.
+ * Resolution chain: path (explicit) → mdfind + binary → fallback
+ */
+export function resolveAppPath(app: AppDefinition): string | null {
+  // 1. Explicit path override
+  if (app.path) {
+    if (existsSync(app.path)) return app.path
+    console.error(`sandbox: warning: configured path not found: ${app.path}`)
+  }
+
+  // 2. Auto-discovery via mdfind
+  if (app.bundle) {
+    try {
+      const result = execFileSync("mdfind", [
+        `kMDItemCFBundleIdentifier == '${app.bundle}'`,
+      ], { encoding: "utf-8", timeout: 5000 }).trim()
+
+      const appPath = result.split("\n")[0]
+      if (appPath) {
+        if (app.binary) {
+          const fullPath = join(appPath, app.binary)
+          if (existsSync(fullPath)) return fullPath
+        } else {
+          // No binary specified — return the .app path (caller uses `open -a`)
+          return appPath
+        }
+      }
+    } catch {
+      // mdfind failed or timed out — continue to fallback
+    }
+  }
+
+  // 3. Hardcoded fallback
+  if (app.fallback && existsSync(app.fallback)) return app.fallback
+
+  return null
+}
