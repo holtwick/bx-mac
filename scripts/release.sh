@@ -32,10 +32,26 @@ if [ -n "${PREV_TAG}" ]; then
   echo ""
 fi
 
-# Build release notes from git log
+# Generate release notes with AI from diff + commit log
 NOTES=""
 if [ -n "${PREV_TAG}" ]; then
-  NOTES=$(git log --pretty=format:"- %s" "${PREV_TAG}..HEAD" | grep -v "^- v[0-9]" || true)
+  CHANGES=$(cat <<CONTEXT
+Commits:
+$(git log --pretty=format:"- %s" "${PREV_TAG}..HEAD" | grep -v "^- v[0-9]" || true)
+
+Diff:
+$(git diff "${PREV_TAG}..HEAD" -- src/ | head -500)
+CONTEXT
+)
+  if command -v claude &>/dev/null; then
+    NOTES=$(echo "${CHANGES}" | claude -p \
+      "Write concise GitHub release notes for ${TAG} of 'bx' (a macOS sandbox CLI tool). Based on the commits and diff provided, summarize what changed in a short bullet list. No heading, no intro, just the bullet points. Write in English." \
+      --model haiku 2>/dev/null || true)
+  fi
+  # Fallback to plain commit list if AI is unavailable
+  if [ -z "${NOTES}" ]; then
+    NOTES=$(git log --pretty=format:"- %s" "${PREV_TAG}..HEAD" | grep -v "^- v[0-9]" || true)
+  fi
 fi
 if [ -z "${NOTES}" ]; then
   NOTES="- Release ${TAG}"
