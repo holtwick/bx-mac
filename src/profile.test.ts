@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest"
 import { mkdirSync, rmSync, writeFileSync } from "node:fs"
 import { join } from "node:path"
-import { collectBlockedDirs, collectIgnoredPaths, generateProfile, isSelfProtected, parseHomeConfig, PROTECTED_DOTDIRS } from "./profile.js"
+import { collectBlockedDirs, collectIgnoredPaths, generateProfile, isSelfProtected, parseHomeConfig, PROTECTED_DOTDIRS, PROTECTED_LIBRARY_DIRS } from "./profile.js"
 
 describe("PROTECTED_DOTDIRS", () => {
   it("includes essential sensitive directories", () => {
@@ -9,6 +9,17 @@ describe("PROTECTED_DOTDIRS", () => {
     expect(PROTECTED_DOTDIRS).toContain(".gnupg")
     expect(PROTECTED_DOTDIRS).toContain(".docker")
     expect(PROTECTED_DOTDIRS).toContain(".cargo")
+  })
+})
+
+describe("PROTECTED_LIBRARY_DIRS", () => {
+  it("includes sensitive Library subdirectories", () => {
+    expect(PROTECTED_LIBRARY_DIRS).toContain("Keychains")
+    expect(PROTECTED_LIBRARY_DIRS).toContain("Mail")
+    expect(PROTECTED_LIBRARY_DIRS).toContain("Messages")
+    expect(PROTECTED_LIBRARY_DIRS).toContain("Safari")
+    expect(PROTECTED_LIBRARY_DIRS).toContain("Cookies")
+    expect(PROTECTED_LIBRARY_DIRS).toContain("Mobile Documents")
   })
 })
 
@@ -198,6 +209,14 @@ describe("collectIgnoredPaths", () => {
 
   afterEach(() => {
     rmSync(tmpBase, { recursive: true, force: true })
+  })
+
+  it("includes protected Library subdirectories", () => {
+    const ignored = collectIgnoredPaths(home, [workDir])
+    expect(ignored).toContain(join(home, "Library", "Keychains"))
+    expect(ignored).toContain(join(home, "Library", "Mail"))
+    expect(ignored).toContain(join(home, "Library", "Safari"))
+    expect(ignored).toContain(join(home, "Library", "Mobile Documents"))
   })
 
   it("matches simple patterns recursively in workdir subdirectories", () => {

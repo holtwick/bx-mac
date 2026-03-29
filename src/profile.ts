@@ -12,6 +12,44 @@ export const PROTECTED_DOTDIRS = [
   ".gem",
 ]
 
+
+export const PROTECTED_LIBRARY_DIRS = [
+  "Accounts",
+  "Calendars",
+  "CallServices",
+  "CloudStorage",
+  "Contacts",
+  "Cookies",
+  "Finance",
+  "FinanceBackup",
+  "Google",
+  "HomeKit",
+  "IdentityServices",
+  "Keychains",
+  "Mail",
+  "Messages",
+  "Mobile Documents",
+  "News",
+  "Passes",
+  "PersonalizationPortrait",
+  "Photos",
+  "Safari",
+  "SafariSafeBrowsing",
+  "Sharing",
+  "Suggestions",
+  "Thunderbird",
+  "WebKit",
+  "com.apple.appleaccountd",
+  "com.apple.iTunesCloud",
+]
+
+export const PROTECTED_CONTAINER_PATTERNS = [
+  "com.bitwarden.*",
+  "com.agilebits.*",
+  "com.1password.*",
+  "com.moneymoney-app.*",
+]
+
 // --- Line / file parsing helpers ---
 
 function parseLines(filePath: string): string[] {
@@ -189,8 +227,25 @@ export function collectBlockedDirs(
 
 // --- Ignored path collection ---
 
+function collectProtectedContainers(home: string): string[] {
+  const containerDirs = ["Containers", "Group Containers"]
+  const matched: string[] = []
+  for (const dir of containerDirs) {
+    const base = join(home, "Library", dir)
+    if (!existsSync(base)) continue
+    for (const pattern of PROTECTED_CONTAINER_PATTERNS) {
+      matched.push(...globSync(pattern, { cwd: base }).map((m) => join(base, m)))
+    }
+  }
+  return matched
+}
+
 export function collectIgnoredPaths(home: string, workDirs: string[]): string[] {
-  const ignored: string[] = PROTECTED_DOTDIRS.map((d) => join(home, d))
+  const ignored: string[] = [
+    ...PROTECTED_DOTDIRS.map((d) => join(home, d)),
+    ...PROTECTED_LIBRARY_DIRS.map((d) => join(home, "Library", d)),
+    ...new Set(collectProtectedContainers(home)),
+  ]
 
   // Global ~/.bxignore — only plain deny lines (skip RW:/RO: prefixed)
   const globalIgnore = join(home, ".bxignore")
@@ -224,13 +279,14 @@ function sbplLiteral(path: string): string {
 
 function sbplPathRule(path: string): string {
   let isDir = false
-  try { isDir = existsSync(path) && statSync(path).isDirectory() } catch {}
+  try { isDir = existsSync(path) && statSync(path).isDirectory() } catch { }
   return isDir ? sbplSubpath(path) : sbplLiteral(path)
 }
 
 function sbplDenyBlock(comment: string, verb: string, rules: string[]): string {
-  if (rules.length === 0) return ""
-  return `\n; ${comment}\n(deny ${verb}\n${rules.join("\n")}\n)\n`
+  const unique = [...new Set(rules)]
+  if (unique.length === 0) return ""
+  return `\n; ${comment}\n(deny ${verb}\n${unique.join("\n")}\n)\n`
 }
 
 export function generateProfile(
