@@ -372,6 +372,10 @@ Some AI coding tools ship with their own sandboxing. bx complements these by pro
 
 These are great when available, but they only protect within their own tool. bx wraps the entire process — so even if a tool's built-in sandbox is misconfigured, disabled, or absent, your files stay protected.
 
+## 🔗 Alternatives
+
+- [Agent Safehouse](https://agent-safehouse.dev/) — macOS kernel-level sandboxing for LLM coding agents via `sandbox-exec`. Deny-first model that blocks write access outside the project directory.
+
 ## 📄 License
 
 MIT — see [LICENSE](LICENSE).
