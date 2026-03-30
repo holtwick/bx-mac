@@ -21,6 +21,8 @@ export interface AppDefinition {
   passWorkdirs?: boolean | "first"
   /** Preconfigured working directories (used when none given on CLI) */
   workdirs?: string[]
+  /** Run the app in the background (detached, output to log file) */
+  background?: boolean
 }
 
 /** Built-in app definitions — always available, can be overridden via config */
@@ -57,6 +59,7 @@ function parseAppDef(def: Record<string, unknown>): AppDefinition {
     args: Array.isArray(def.args) ? def.args.filter((a): a is string => typeof a === "string") : undefined,
     passWorkdirs: typeof def.passWorkdirs === "boolean" || def.passWorkdirs === "first" ? def.passWorkdirs : undefined,
     workdirs: Array.isArray(def.workdirs) ? def.workdirs.filter((a): a is string => typeof a === "string") : undefined,
+    background: typeof def.background === "boolean" ? def.background : undefined,
   }
 }
 

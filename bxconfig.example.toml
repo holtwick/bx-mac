@@ -64,6 +64,15 @@
 # mode = "xcode"
 # workdirs = ["~/work/my-ios-app"]
 
+# --- background option ---
+# background = true — run the app detached (like nohup &), output goes to /tmp/bx-<pid>.log
+# Can also be enabled per-invocation with: bx --background <mode> [workdir...]
+
+# [myserver]
+# mode = "exec"
+# background = true
+# workdirs = ["~/work/my-server"]
+
 # --- passWorkdirs options ---
 # true    — all workdirs are passed as launch arguments (default)
 # false   — no workdirs are passed (e.g. xcode)

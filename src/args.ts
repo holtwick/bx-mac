@@ -7,6 +7,7 @@ export interface Args {
   verbose: boolean
   dry: boolean
   profileSandbox: boolean
+  background: boolean
   appArgs: string[]
   implicit: boolean
 }
@@ -21,6 +22,7 @@ export function parseArgs(validModes: string[]): Args {
   const verbose = rawArgs.includes("--verbose")
   const dry = rawArgs.includes("--dry")
   const profileSandbox = rawArgs.includes("--profile-sandbox")
+  const background = rawArgs.includes("--background")
   const positional = rawArgs.filter((a) => !a.startsWith("--"))
 
   // Split at "--" for app arguments (also used by exec mode)
@@ -53,5 +55,5 @@ export function parseArgs(validModes: string[]): Args {
     process.exit(1)
   }
 
-  return { mode, workArgs, verbose, dry, profileSandbox, appArgs, implicit: implicitWorkdirs }
+  return { mode, workArgs, verbose, dry, profileSandbox, background, appArgs, implicit: implicitWorkdirs }
 }

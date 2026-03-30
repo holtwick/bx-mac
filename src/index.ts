@@ -1,4 +1,4 @@
-import { writeFileSync, rmSync } from "node:fs"
+import { writeFileSync, rmSync, openSync } from "node:fs"
 import { join, resolve, dirname } from "node:path"
 import { spawn } from "node:child_process"
 import { createInterface } from "node:readline"
@@ -44,7 +44,7 @@ async function main() {
   const config = loadConfig(HOME)
   const apps = getAvailableApps(config)
   const validModes = getValidModes(apps)
-  const { mode, workArgs, verbose, dry, profileSandbox, appArgs, implicit } = parseArgs(validModes)
+  const { mode, workArgs, verbose, dry, profileSandbox, background: backgroundFlag, appArgs, implicit } = parseArgs(validModes)
 
   // Use preconfigured workdirs from config if none given on CLI
   const app = apps[mode]
@@ -107,6 +107,7 @@ async function main() {
   writeFileSync(profilePath, profile)
 
   const cmd = buildCommand(mode, workDirs, HOME, profileSandbox, appArgs, apps)
+  const background = backgroundFlag || app?.background === true
 
   const nestedSandboxWarning = getNestedSandboxWarning(mode, apps)
   if (nestedSandboxWarning) {
@@ -118,6 +119,32 @@ async function main() {
   }
 
   console.error("")
+
+  if (background) {
+    const logPath = join("/tmp", `bx-${process.pid}.log`)
+    const logFd = openSync(logPath, "a")
+
+    const child = spawn("sandbox-exec", [
+      "-f", profilePath,
+      "-D", `HOME=${HOME}`,
+      "-D", `WORK=${workDirs[0]}`,
+      cmd.bin,
+      ...cmd.args,
+    ], {
+      cwd: workDirs[0],
+      stdio: ["ignore", logFd, logFd],
+      detached: true,
+      env: { ...process.env, CODEBOX_SANDBOX: "1" },
+    })
+
+    child.unref()
+    bringAppToFront(mode, apps)
+
+    console.error(fmt.info(`running in background (pid ${child.pid})`))
+    console.error(fmt.detail(`log: ${logPath}`))
+    console.error(fmt.detail(`sandbox profile: ${profilePath} (kept until process exits)`))
+    process.exit(0)
+  }
 
   const child = spawn("sandbox-exec", [
     "-f", profilePath,

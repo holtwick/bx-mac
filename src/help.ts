@@ -40,6 +40,7 @@ const OPTIONS_TEXT = `
 Options:
   --dry                show what will be protected, don't launch
   --verbose            print the generated sandbox profile
+  --background         run in background, log output to /tmp/bx-<pid>.log
   --profile-sandbox    use an isolated VSCode profile (code mode only)
   -v, --version        show version
   -h, --help           show this help
@@ -53,6 +54,7 @@ Configuration:
                          path = "..."           explicit executable path
                          args = ["..."]         extra arguments
                          passWorkdirs = true|false|"first" pass workdirs as launch args
+                         background = true      run in background by default
                        built-in apps (code, xcode) can be overridden
   ~/.bxignore          sandbox rules (one per line):
                          path         block access (deny)
