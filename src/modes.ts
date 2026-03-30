@@ -17,7 +17,7 @@ function isBuiltinMode(mode: string): mode is BuiltinMode {
 
 function getWorkdirsToPass(app: AppDefinition, workDirs: string[]): string[] {
   if (app.passWorkdirs === false) return []
-  if (app.passWorkdirs === "first") return workDirs.slice(0, 1)
+  if (typeof app.passWorkdirs === "number") return workDirs.slice(0, app.passWorkdirs)
   return workDirs
 }
 

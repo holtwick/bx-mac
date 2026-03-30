@@ -165,13 +165,13 @@ path = "/usr/local/bin/code"
 | `path` | Absolute path to the executable **or** `.app` bundle (highest priority, skips discovery) |
 | `fallback` | Absolute fallback path if `mdfind` discovery fails |
 | `args` | Extra arguments always passed to the app |
-| `passWorkdirs` | Whether `workdir...` is forwarded as app launch args (`true`/`false`/`"first"`) |
+| `passWorkdirs` | Whether `workdir...` is forwarded as app launch args (`true`/`false`/`N`) |
 | `workdirs` | Default working directories when none are given on the CLI (supports `~/` paths) |
 | `background` | Run the app detached in the background by default (`true`/`false`) |
 
 **Resolution order:** `path` → `mdfind` by `bundle` + `binary` → `fallback`
 
-`passWorkdirs` controls launch argument behavior and is independent of sandbox scope. Even with `passWorkdirs = false`, the provided `workdir...` still defines what the sandbox can access. Use `passWorkdirs = "first"` to pass only the first workdir as a launch argument — useful when the app should open one directory but the sandbox should grant access to multiple.
+`passWorkdirs` controls launch argument behavior and is independent of sandbox scope. Even with `passWorkdirs = false`, the provided `workdir...` still defines what the sandbox can access. Use `passWorkdirs = 1` to pass only the first workdir as a launch argument — useful when the app should open one directory but the sandbox should grant access to multiple.
 
 **Workdir shortcuts with `mode`** let you create named entries that inherit everything from an existing app — just set `mode` and `workdirs`:
 

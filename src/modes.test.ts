@@ -11,7 +11,8 @@ const testApps: Record<string, AppDefinition> = {
   xcode: { ...BUILTIN_APPS.xcode, path: "/test/Xcode" },
   custom: { path: "/test/CustomApp", args: ["--flag"] },
   customNoWorkdirs: { path: "/test/CustomNoWorkdirs", passWorkdirs: false },
-  customFirstWorkdir: { path: "/test/CustomFirst", passWorkdirs: "first" },
+  customFirstWorkdir: { path: "/test/CustomFirst", passWorkdirs: 1 },
+  customFirstTwo: { path: "/test/CustomFirstTwo", passWorkdirs: 2 },
   gram: { path: "/Applications/Gram.app" },
 }
 
@@ -84,11 +85,19 @@ describe("buildCommand", () => {
     expect(cmd.args).not.toContain("/work/a")
   })
 
-  it("passWorkdirs='first' passes only the first workdir", () => {
+  it("passWorkdirs=1 passes only the first workdir", () => {
     const cmd = buildCommand("customFirstWorkdir", ["/work/a", "/work/b", "/work/c"], home, false, [], testApps)
     expect(cmd.bin).toBe("/test/CustomFirst")
     expect(cmd.args).toContain("/work/a")
     expect(cmd.args).not.toContain("/work/b")
+    expect(cmd.args).not.toContain("/work/c")
+  })
+
+  it("passWorkdirs=2 passes the first two workdirs", () => {
+    const cmd = buildCommand("customFirstTwo", ["/work/a", "/work/b", "/work/c"], home, false, [], testApps)
+    expect(cmd.bin).toBe("/test/CustomFirstTwo")
+    expect(cmd.args).toContain("/work/a")
+    expect(cmd.args).toContain("/work/b")
     expect(cmd.args).not.toContain("/work/c")
   })
 

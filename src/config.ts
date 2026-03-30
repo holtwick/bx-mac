@@ -17,8 +17,8 @@ export interface AppDefinition {
   fallback?: string
   /** Extra args always passed to the app */
   args?: string[]
-  /** Whether to pass workdirs as launch arguments (default: true, "first" = only first) */
-  passWorkdirs?: boolean | "first"
+  /** Whether to pass workdirs as launch arguments (default: true, number = first N) */
+  passWorkdirs?: boolean | number
   /** Preconfigured working directories (used when none given on CLI) */
   workdirs?: string[]
   /** Run the app in the background (detached, output to log file) */
@@ -57,7 +57,7 @@ function parseAppDef(def: Record<string, unknown>): AppDefinition {
     path: typeof def.path === "string" ? def.path : undefined,
     fallback: typeof def.fallback === "string" ? def.fallback : undefined,
     args: Array.isArray(def.args) ? def.args.filter((a): a is string => typeof a === "string") : undefined,
-    passWorkdirs: typeof def.passWorkdirs === "boolean" || def.passWorkdirs === "first" ? def.passWorkdirs : undefined,
+    passWorkdirs: typeof def.passWorkdirs === "boolean" || (typeof def.passWorkdirs === "number" && Number.isInteger(def.passWorkdirs) && def.passWorkdirs > 0) ? def.passWorkdirs : def.passWorkdirs === "first" ? 1 : undefined,
     workdirs: Array.isArray(def.workdirs) ? def.workdirs.filter((a): a is string => typeof a === "string") : undefined,
     background: typeof def.background === "boolean" ? def.background : undefined,
   }

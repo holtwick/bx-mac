@@ -81,7 +81,7 @@ Available fields per app:
 | `binary` | Relative path to executable inside the `.app` bundle |
 | `fallback` | Absolute fallback path if discovery fails |
 | `args` | Extra arguments always passed to the app |
-| `passWorkdirs` | Whether workdirs are forwarded as launch args (`true`/`false`/`"first"`) |
+| `passWorkdirs` | Whether workdirs are forwarded as launch args (`true`/`false`/`N`) |
 | `workdirs` | Default working directories when none given on CLI (supports `~/` paths) |
 | `background` | Run the app detached in the background, output to log file (`true`/`false`) |
 

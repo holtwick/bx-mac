@@ -102,6 +102,26 @@ bundle = "com.cursor"
     expect(config.apps.cursor?.bundle).toBe("com.cursor")
   })
 
+  it("parses numeric passWorkdirs", () => {
+    setConfig(`
+[myapp]
+path = "/test/app"
+passWorkdirs = 2
+`)
+    const config = loadConfig("/Users/test")
+    expect(config.apps.myapp.passWorkdirs).toBe(2)
+  })
+
+  it("converts legacy 'first' passWorkdirs to 1", () => {
+    setConfig(`
+[myapp]
+path = "/test/app"
+passWorkdirs = "first"
+`)
+    const config = loadConfig("/Users/test")
+    expect(config.apps.myapp.passWorkdirs).toBe(1)
+  })
+
   it("handles config without apps section", () => {
     setConfig(`
 [other]
