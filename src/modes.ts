@@ -15,8 +15,10 @@ function isBuiltinMode(mode: string): mode is BuiltinMode {
   return (BUILTIN_MODES as readonly string[]).includes(mode)
 }
 
-function shouldPassWorkdirs(app: AppDefinition): boolean {
-  return app.passWorkdirs !== false
+function getWorkdirsToPass(app: AppDefinition, workDirs: string[]): string[] {
+  if (app.passWorkdirs === false) return []
+  if (app.passWorkdirs === "first") return workDirs.slice(0, 1)
+  return workDirs
 }
 
 // --- .app bundle path helpers ---
@@ -124,7 +126,7 @@ function buildAppCommand(
 
   if (app.args) args.push(...app.args)
   if (appArgs.length > 0) args.push(...appArgs)
-  if (shouldPassWorkdirs(app)) args.push(...workDirs)
+  args.push(...getWorkdirsToPass(app, workDirs))
 
   return { bin, args }
 }

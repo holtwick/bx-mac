@@ -63,3 +63,15 @@
 # [ios]
 # mode = "xcode"
 # workdirs = ["~/work/my-ios-app"]
+
+# --- passWorkdirs options ---
+# true    — all workdirs are passed as launch arguments (default)
+# false   — no workdirs are passed (e.g. xcode)
+# "first" — only the first workdir is passed (sandbox covers all)
+
+# [web]
+# bundle = "com.example.browser"
+# binary = "Contents/MacOS/Browser"
+# args = ["--no-sandbox"]
+# passWorkdirs = "first"
+# workdirs = ["~/work/main-project", "~/work/shared-deps"]

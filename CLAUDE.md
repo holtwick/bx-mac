@@ -80,6 +80,7 @@ Available fields per app:
 | `binary` | Relative path to executable inside the `.app` bundle |
 | `fallback` | Absolute fallback path if discovery fails |
 | `args` | Extra arguments always passed to the app |
+| `passWorkdirs` | Whether workdirs are forwarded as launch args (`true`/`false`/`"first"`) |
 | `workdirs` | Default working directories when none given on CLI (supports `~/` paths) |
 
 App resolution order: `path` (explicit) → `bundle` + `binary` (mdfind auto-discovery) → `fallback` (hardcoded). See `bxconfig.example.toml` for all options.

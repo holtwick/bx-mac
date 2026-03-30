@@ -11,6 +11,7 @@ const testApps: Record<string, AppDefinition> = {
   xcode: { ...BUILTIN_APPS.xcode, path: "/test/Xcode" },
   custom: { path: "/test/CustomApp", args: ["--flag"] },
   customNoWorkdirs: { path: "/test/CustomNoWorkdirs", passWorkdirs: false },
+  customFirstWorkdir: { path: "/test/CustomFirst", passWorkdirs: "first" },
   gram: { path: "/Applications/Gram.app" },
 }
 
@@ -81,6 +82,14 @@ describe("buildCommand", () => {
     const cmd = buildCommand("customNoWorkdirs", ["/work/a"], home, false, [], testApps)
     expect(cmd.bin).toBe("/test/CustomNoWorkdirs")
     expect(cmd.args).not.toContain("/work/a")
+  })
+
+  it("passWorkdirs='first' passes only the first workdir", () => {
+    const cmd = buildCommand("customFirstWorkdir", ["/work/a", "/work/b", "/work/c"], home, false, [], testApps)
+    expect(cmd.bin).toBe("/test/CustomFirst")
+    expect(cmd.args).toContain("/work/a")
+    expect(cmd.args).not.toContain("/work/b")
+    expect(cmd.args).not.toContain("/work/c")
   })
 
   it("normalizes .app path to executable for custom app", () => {

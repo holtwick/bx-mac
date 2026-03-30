@@ -52,7 +52,7 @@ Configuration:
                          binary = "..."         relative path in .app bundle
                          path = "..."           explicit executable path
                          args = ["..."]         extra arguments
-                         passWorkdirs = true|false pass workdirs as launch args
+                         passWorkdirs = true|false|"first" pass workdirs as launch args
                        built-in apps (code, xcode) can be overridden
   ~/.bxignore          sandbox rules (one per line):
                          path         block access (deny)
