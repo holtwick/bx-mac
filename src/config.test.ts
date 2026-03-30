@@ -112,14 +112,14 @@ passWorkdirs = 2
     expect(config.apps.myapp.passWorkdirs).toBe(2)
   })
 
-  it("converts legacy 'first' passWorkdirs to 1", () => {
+  it("ignores invalid passWorkdirs string", () => {
     setConfig(`
 [myapp]
 path = "/test/app"
 passWorkdirs = "first"
 `)
     const config = loadConfig("/Users/test")
-    expect(config.apps.myapp.passWorkdirs).toBe(1)
+    expect(config.apps.myapp.passWorkdirs).toBeUndefined()
   })
 
   it("handles config without apps section", () => {

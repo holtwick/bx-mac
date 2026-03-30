@@ -57,7 +57,7 @@ function parseAppDef(def: Record<string, unknown>): AppDefinition {
     path: typeof def.path === "string" ? def.path : undefined,
     fallback: typeof def.fallback === "string" ? def.fallback : undefined,
     args: Array.isArray(def.args) ? def.args.filter((a): a is string => typeof a === "string") : undefined,
-    passWorkdirs: typeof def.passWorkdirs === "boolean" || (typeof def.passWorkdirs === "number" && Number.isInteger(def.passWorkdirs) && def.passWorkdirs > 0) ? def.passWorkdirs : def.passWorkdirs === "first" ? 1 : undefined,
+    passWorkdirs: typeof def.passWorkdirs === "boolean" || (typeof def.passWorkdirs === "number" && Number.isInteger(def.passWorkdirs) && def.passWorkdirs > 0) ? def.passWorkdirs : undefined,
     workdirs: Array.isArray(def.workdirs) ? def.workdirs.filter((a): a is string => typeof a === "string") : undefined,
     background: typeof def.background === "boolean" ? def.background : undefined,
   }
