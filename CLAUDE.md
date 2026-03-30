@@ -134,7 +134,9 @@ secrets/          # blocks secrets/ directories at any depth
 
 These are always blocked, regardless of configuration:
 
-`.ssh`, `.gnupg`, `.docker`, `.zsh_sessions`, `.cargo`, `.gradle`, `.gem`
+**Dotdirs:** `.ssh`, `.gnupg`, `.docker`, `.zsh_sessions`, `.cargo`, `.gradle`, `.gem`
+
+**Library (opinionated):** `Accounts`, `Calendars`, `Contacts`, `Cookies`, `Finance`, `Mail`, `Messages`, `Mobile Documents`, `Photos`, `Safari`, and others — plus app containers matching password managers and finance apps (1Password, Bitwarden, MoneyMoney)
 
 ## Architecture
 
@@ -161,11 +163,12 @@ The solution is a **blocklist**: individually deny only the directories that sho
 1. Parse `~/.bxignore` for `rw:` (read-write) and `ro:` (read-only) entries
 2. Scan `$HOME` for non-dot directories (skip `Library` and the script's own directory)
 3. For each directory: if an allowed or read-only path is inside it, **descend** and block only its siblings — never deny a parent of an accessible path
-4. Dotfiles (`~/.*/`) and `~/Library` are always accessible (VSCode, Node, shell, and other tools depend on them)
-5. Built-in protected dotdirs are always denied
-6. Plain lines in `~/.bxignore` and `<workdir>/.bxignore` add further deny rules
-7. `ro:` directories get a `deny file-write*` rule (read allowed, write blocked)
-8. The generated profile is written to `/tmp` and cleaned up on exit
+4. Dotfiles (`~/.*/`) and `~/Library` are generally accessible (VSCode, Node, shell, and other tools depend on them)
+5. Opinionated protection for specific `~/Library` subdirs (Mail, Messages, Photos, Safari, …) and app containers of password managers / finance apps
+6. Built-in protected dotdirs are always denied
+7. Plain lines in `~/.bxignore` and `<workdir>/.bxignore` add further deny rules
+8. `ro:` directories get a `deny file-write*` rule (read allowed, write blocked)
+9. The generated profile is written to `/tmp` and cleaned up on exit
 
 ### What is protected
 
@@ -177,6 +180,8 @@ The solution is a **blocklist**: individually deny only the directories that sho
 | `rw:` dirs in `~/.bxignore` | **full** |
 | `ro:` dirs in `~/.bxignore` | **read-only** |
 | `~/.*/` (dotfiles/dotdirs) | **full** (except protected ones) |
-| `~/Library` | **full** |
+| `~/Library` | **full** (except opinionated protected subdirs) |
 | Built-in protected dotdirs | **blocked** |
+| Protected Library subdirs (Mail, Photos, …) | **blocked** |
+| Password manager / finance app containers | **blocked** |
 | Plain paths in `.bxignore` | **blocked** |

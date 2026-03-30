@@ -17,7 +17,7 @@ AI-powered coding tools like Claude Code, Copilot, or Cline run with **broad fil
 bx ~/work/my-project
 ```
 
-That's it. 🎉 VSCode opens with full access to `~/work/my-project` and nothing else.
+That's it. 🎉 VSCode opens with full access to `~/work/my-project` and nothing else. Read [the blog post](https://holtwick.de/blog/bx-sandbox) for more background on the motivation behind bx.
 
 Need multiple directories? No problem:
 
@@ -30,6 +30,7 @@ bx ~/work/my-project ~/work/shared-lib
 - 🔒 Blocks `~/Documents`, `~/Desktop`, `~/Downloads`, and all other personal folders
 - 🚧 Blocks sibling projects — only the directory you specify is accessible
 - 🛡️ Protects sensitive dotdirs like `~/.ssh`, `~/.gnupg`, `~/.docker`, `~/.cargo`
+- 🏛️ Opinionated protection for `~/Library` — blocks privacy-sensitive subdirectories (Mail, Messages, Photos, Safari, Contacts, …) and containers of password managers/finance apps, while keeping tooling-relevant paths accessible
 - ⚙️ Keeps VSCode, extensions, shell, Node.js, and other tooling fully functional
 - 🔍 Generates sandbox rules dynamically based on your actual `$HOME` contents
 - 📝 Supports `.bxignore` files (searched recursively) to hide secrets like `.env` files within a project
@@ -113,6 +114,9 @@ bx zed ~/work/my-project
 # ⚡ Run a script in a sandbox
 bx exec ~/work/my-project -- python train.py
 
+# 🔀 Run in the background (terminal stays free)
+bx --background code ~/work/my-project
+
 # 🔍 Preview what will be protected (no launch)
 bx --dry ~/work/my-project
 
@@ -126,6 +130,7 @@ bx --verbose ~/work/my-project
 | --- | --- |
 | `--dry` | Show a tree of all protected, read-only, and accessible paths — don't launch anything |
 | `--verbose` | Print the generated sandbox profile plus launch details (binary, arguments, cwd, focus command) |
+| `--background` | Run the app detached in the background (like `nohup &`), output goes to `/tmp/bx-<pid>.log` |
 | `--profile-sandbox` | Use an isolated VSCode profile (separate extensions/settings, `code` mode only) |
 
 On normal runs, bx also prints a short policy summary (number of workdirs, blocked directories, hidden paths, and read-only directories).
@@ -162,6 +167,7 @@ path = "/usr/local/bin/code"
 | `args` | Extra arguments always passed to the app |
 | `passWorkdirs` | Whether `workdir...` is forwarded as app launch args (`true`/`false`/`"first"`) |
 | `workdirs` | Default working directories when none are given on the CLI (supports `~/` paths) |
+| `background` | Run the app detached in the background by default (`true`/`false`) |
 
 **Resolution order:** `path` → `mdfind` by `bundle` + `binary` → `fallback`
 
@@ -216,9 +222,11 @@ ro:reference/docs
 ro:shared/toolchain
 ```
 
-Deny rules are applied **in addition** to the built-in protected list:
+Deny rules are applied **in addition** to the built-in protected lists:
 
-> 🔒 `.ssh` `.gnupg` `.docker` `.zsh_sessions` `.cargo` `.gradle` `.gem`
+> 🔒 **Dotdirs:** `.ssh` `.gnupg` `.docker` `.zsh_sessions` `.cargo` `.gradle` `.gem`
+>
+> 🏛️ **Library (opinionated):** `Accounts` `Calendars` `Contacts` `Cookies` `Finance` `Mail` `Messages` `Mobile Documents` `Photos` `Safari` and [others (see full list)](src/profile.ts) — plus containers of password managers & finance apps
 
 ### `<project>/.bxignore`
 
@@ -288,9 +296,10 @@ bx generates a macOS sandbox profile at launch time:
 2. **Block** each one individually with `(deny file* (subpath ...))`
 3. **Skip** all working directories, `~/Library`, dotfiles, and `rw:`/`ro:` paths from `~/.bxignore`
 4. **Descend** into parent directories of allowed paths to block only siblings (because SBPL deny rules always override allow rules)
-5. **Append** deny rules for protected dotdirs, plain entries in `~/.bxignore`, and `.bxignore` files found recursively in each working directory
-6. **Apply** `(deny file-write*)` rules for `ro:` directories (read allowed, write blocked)
-7. **Write** the profile to `/tmp`, launch the app via `sandbox-exec`, clean up on exit
+5. **Protect** an opinionated set of `~/Library` subdirectories (Mail, Messages, Photos, Safari, Contacts, Calendars, …) and app containers matching known password managers and finance apps (1Password, Bitwarden, MoneyMoney, …)
+6. **Append** deny rules for protected dotdirs, plain entries in `~/.bxignore`, and `.bxignore` files found recursively in each working directory
+7. **Apply** `(deny file-write*)` rules for `ro:` directories (read allowed, write blocked)
+8. **Write** the profile to `/tmp`, launch the app via `sandbox-exec`, clean up on exit
 
 ### Why not a simple deny-all + allow?
 
