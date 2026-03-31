@@ -52,7 +52,9 @@ path = "/Applications/Zed.app/Contents/MacOS/zed"
       path: undefined,
       fallback: undefined,
       args: ["--no-sandbox"],
-      passWorkdirs: undefined,
+      passPaths: undefined,
+      paths: undefined,
+      background: undefined,
     })
     expect(config.apps.zed?.path).toBe("/Applications/Zed.app/Contents/MacOS/zed")
   })
@@ -102,6 +104,57 @@ bundle = "com.cursor"
     expect(config.apps.cursor?.bundle).toBe("com.cursor")
   })
 
+  it("parses numeric passPaths", () => {
+    setConfig(`
+[myapp]
+path = "/test/app"
+passPaths = 2
+`)
+    const config = loadConfig("/Users/test")
+    expect(config.apps.myapp.passPaths).toBe(2)
+  })
+
+  it("parses array passPaths", () => {
+    setConfig(`
+[myapp]
+path = "/test/app"
+passPaths = ["~/work/a", "~/work/b"]
+`)
+    const config = loadConfig("/Users/test")
+    expect(config.apps.myapp.passPaths).toEqual(["~/work/a", "~/work/b"])
+  })
+
+  it("reads legacy passWorkdirs as fallback", () => {
+    setConfig(`
+[myapp]
+path = "/test/app"
+passWorkdirs = 2
+`)
+    const config = loadConfig("/Users/test")
+    expect(config.apps.myapp.passPaths).toBe(2)
+  })
+
+  it("reads legacy workdirs as fallback for paths", () => {
+    setConfig(`
+[myapp]
+path = "/test/app"
+workdirs = ["~/work/a"]
+`)
+    const config = loadConfig("/Users/test")
+    expect(config.apps.myapp.paths).toEqual(["~/work/a"])
+  })
+
+  it("passPaths takes precedence over legacy passWorkdirs", () => {
+    setConfig(`
+[myapp]
+path = "/test/app"
+passWorkdirs = 2
+passPaths = 1
+`)
+    const config = loadConfig("/Users/test")
+    expect(config.apps.myapp.passPaths).toBe(1)
+  })
+
   it("handles config without apps section", () => {
     setConfig(`
 [other]
@@ -137,12 +190,12 @@ describe("getAvailableApps", () => {
   it("resolves mode references to inherit app fields", () => {
     const apps = getAvailableApps({
       apps: {
-        myproject: { mode: "code", workdirs: ["~/work/my-project"] },
+        myproject: { mode: "code", paths: ["~/work/my-project"] },
       },
     })
     expect(apps.myproject.bundle).toBe("com.microsoft.VSCode")
     expect(apps.myproject.binary).toBe("Contents/MacOS/Electron")
-    expect(apps.myproject.workdirs).toEqual(["~/work/my-project"])
+    expect(apps.myproject.paths).toEqual(["~/work/my-project"])
     expect(apps.myproject.mode).toBeUndefined()
   })
 
@@ -150,12 +203,12 @@ describe("getAvailableApps", () => {
     const apps = getAvailableApps({
       apps: {
         cursor: { bundle: "com.cursor", binary: "Contents/MacOS/Cursor", args: ["--no-sandbox"] },
-        myproject: { mode: "cursor", workdirs: ["~/work/proj"] },
+        myproject: { mode: "cursor", paths: ["~/work/proj"] },
       },
     })
     expect(apps.myproject.bundle).toBe("com.cursor")
     expect(apps.myproject.args).toEqual(["--no-sandbox"])
-    expect(apps.myproject.workdirs).toEqual(["~/work/proj"])
+    expect(apps.myproject.paths).toEqual(["~/work/proj"])
   })
 
   it("own fields override inherited fields", () => {
@@ -168,23 +221,23 @@ describe("getAvailableApps", () => {
     expect(apps.mycode.args).toEqual(["--disable-gpu"])
   })
 
-  it("inherits passWorkdirs from referenced app", () => {
+  it("inherits passPaths from referenced app", () => {
     const apps = getAvailableApps({
       apps: {
-        myxcode: { mode: "xcode", workdirs: ["~/work/ios"] },
+        myxcode: { mode: "xcode", paths: ["~/work/ios"] },
       },
     })
-    expect(apps.myxcode.passWorkdirs).toBe(false)
+    expect(apps.myxcode.passPaths).toBe(false)
   })
 
   it("warns on unknown mode reference", () => {
     const spy = vi.spyOn(console, "error").mockImplementation(() => {})
     const apps = getAvailableApps({
       apps: {
-        broken: { mode: "nonexistent", workdirs: ["~/work"] },
+        broken: { mode: "nonexistent", paths: ["~/work"] },
       },
     })
-    expect(apps.broken.workdirs).toEqual(["~/work"])
+    expect(apps.broken.paths).toEqual(["~/work"])
     expect(spy).toHaveBeenCalledWith(expect.stringContaining("not found"))
     spy.mockRestore()
   })

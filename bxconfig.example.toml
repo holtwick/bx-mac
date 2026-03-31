@@ -19,14 +19,14 @@
   args = [
     "--no-sandbox",
   ]
-  # workdirs = ["~/work/project-a", "~/work/shared-lib"]
+  # paths = ["~/work/project-a", "~/work/shared-lib"]
 
 [xcode]
   bundle = "com.apple.dt.Xcode"
   binary = "Contents/MacOS/Xcode"
   fallback = "/Applications/Xcode.app/Contents/MacOS/Xcode"
-  passWorkdirs = false
-  # workdirs = ["~/work/my-ios-app"]
+  passPaths = false
+  # paths = ["~/work/my-ios-app"]
 
 # --- Finding bundle IDs ---
 # Run: osascript -e 'id of app "AppName"'
@@ -39,8 +39,8 @@
 # bundle = "com.todesktop.230313mzl4w4u92"
 # binary = "Contents/MacOS/Cursor"
 # args = ["--no-sandbox"]
-# passWorkdirs = true
-# workdirs = ["~/work/project-b"]
+# passPaths = true
+# paths = ["~/work/project-b"]
 
 # [zed]
 # bundle = "dev.zed.Zed"
@@ -54,15 +54,15 @@
 # binary = "Contents/MacOS/sublime_text"
 
 # --- Workdir shortcuts (inherit from another app via mode) ---
-# Only workdirs needed — everything else is inherited from the referenced app.
+# Only paths needed — everything else is inherited from the referenced app.
 
 # [myproject]
 # mode = "code"
-# workdirs = ["~/work/my-project", "~/work/shared-lib"]
+# paths = ["~/work/my-project", "~/work/shared-lib"]
 
 # [ios]
 # mode = "xcode"
-# workdirs = ["~/work/my-ios-app"]
+# paths = ["~/work/my-ios-app"]
 
 # --- background option ---
 # background = true — run the app detached (like nohup &), output goes to /tmp/bx-<pid>.log
@@ -71,16 +71,22 @@
 # [myserver]
 # mode = "exec"
 # background = true
-# workdirs = ["~/work/my-server"]
+# paths = ["~/work/my-server"]
 
-# --- passWorkdirs options ---
-# true    — all workdirs are passed as launch arguments (default)
-# false   — no workdirs are passed (e.g. xcode)
-# "first" — only the first workdir is passed (sandbox covers all)
+# --- passPaths options ---
+# true              — all paths are passed as launch arguments (default)
+# false             — no paths are passed (e.g. xcode)
+# N                 — only the first N paths are passed (sandbox covers all)
+# ["~/p1", "~/p2"]  — pass these explicit paths instead of workdirs
 
 # [web]
 # bundle = "com.example.browser"
 # binary = "Contents/MacOS/Browser"
 # args = ["--no-sandbox"]
-# passWorkdirs = "first"
-# workdirs = ["~/work/main-project", "~/work/shared-deps"]
+# passPaths = 1
+# paths = ["~/work/main-project", "~/work/shared-deps"]
+
+# [myeditor]
+# mode = "code"
+# passPaths = ["~/work/main-project"]
+# paths = ["~/work/main-project", "~/work/shared-deps"]

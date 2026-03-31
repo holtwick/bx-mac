@@ -148,18 +148,6 @@ export function parseHomeConfig(home: string, workDirs: string[]): HomeConfig {
   const allowed = new Set(workDirs)
   const readOnly = new Set<string>()
 
-  // Deprecated: migrate ~/.bxallow entries as RW
-  const bxallowPath = join(home, ".bxallow")
-  if (existsSync(bxallowPath)) {
-    console.error("sandbox: WARNING — ~/.bxallow is deprecated. Move entries to ~/.bxignore with RW: prefix.")
-    for (const line of parseLines(bxallowPath)) {
-      const absolute = resolve(home, line)
-      if (existsSync(absolute) && statSync(absolute).isDirectory()) {
-        allowed.add(absolute)
-      }
-    }
-  }
-
   for (const line of parseLines(join(home, ".bxignore"))) {
     const match = line.match(ACCESS_PREFIX_RE)
     if (!match) continue

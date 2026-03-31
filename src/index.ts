@@ -1,4 +1,4 @@
-import { writeFileSync, rmSync, openSync } from "node:fs"
+import { writeFileSync, rmSync, openSync, mkdtempSync, realpathSync } from "node:fs"
 import { join, resolve, dirname } from "node:path"
 import { spawn } from "node:child_process"
 import { createInterface } from "node:readline"
@@ -48,16 +48,16 @@ async function main() {
 
   // Use preconfigured workdirs from config if none given on CLI
   const app = apps[mode]
-  const effectiveWorkArgs = implicit && app?.workdirs?.length ? app.workdirs : workArgs
-  const workDirs = effectiveWorkArgs.map((a) => resolve(a.replace(/^~\//, HOME + "/")))
+  const effectiveWorkArgs = implicit && app?.paths?.length ? app.paths : workArgs
+  const workDirs = effectiveWorkArgs.map((a) => realpathSync(resolve(a.replace(/^~\//, HOME + "/"))))
 
-  if (implicit && !app?.workdirs?.length) {
+  if (implicit && !app?.paths?.length) {
     if (workDirs.some((d) => d === HOME)) {
       console.error(`\n${fmt.error("no working directory specified and current directory is $HOME")}\n`)
       console.error(fmt.detail(`Usage:  bx ${mode} <workdir>`))
-      console.error(fmt.detail(`Config: set default workdirs in ~/.bxconfig.toml:\n`))
+      console.error(fmt.detail(`Config: set default paths in ~/.bxconfig.toml:\n`))
       console.error(fmt.detail(`[${mode}]`))
-      console.error(fmt.detail(`workdirs = ["~/work/my-project"]\n`))
+      console.error(fmt.detail(`paths = ["~/work/my-project"]\n`))
       process.exit(1)
     }
     if (!dry) {
@@ -103,8 +103,9 @@ async function main() {
 
   // --- Launch sandboxed process ---
 
-  const profilePath = join("/tmp", `bx-${process.pid}.sb`)
-  writeFileSync(profilePath, profile)
+  const tmpDir = mkdtempSync(join("/tmp", "bx-"))
+  const profilePath = join(tmpDir, "profile.sb")
+  writeFileSync(profilePath, profile, { mode: 0o600 })
 
   const cmd = buildCommand(mode, workDirs, HOME, profileSandbox, appArgs, apps)
   const background = backgroundFlag || app?.background === true
@@ -114,15 +115,21 @@ async function main() {
     console.error(fmt.detail(nestedSandboxWarning))
   }
 
+  printLaunchDetails(cmd, workDirs[0])
+
   if (verbose) {
-    printLaunchDetails(cmd, workDirs[0], getActivationCommand(mode, apps))
+    const activationCmd = getActivationCommand(mode, apps)
+    if (activationCmd) {
+      const quote = (a: string) => JSON.stringify(a)
+      console.error(fmt.detail(`focus: ${activationCmd.bin} ${activationCmd.args.map(quote).join(" ")}`))
+    }
   }
 
   console.error("")
 
   if (background) {
-    const logPath = join("/tmp", `bx-${process.pid}.log`)
-    const logFd = openSync(logPath, "a")
+    const logPath = join(tmpDir, "bx.log")
+    const logFd = openSync(logPath, "a", 0o600)
 
     const child = spawn("sandbox-exec", [
       "-f", profilePath,
@@ -160,8 +167,10 @@ async function main() {
 
   bringAppToFront(mode, apps)
 
+  const cleanup = () => { try { rmSync(tmpDir, { recursive: true, force: true }) } catch {} }
+  process.on("exit", cleanup)
+
   child.on("close", (code: number | null) => {
-    rmSync(profilePath, { force: true })
     process.exit(code ?? 0)
   })
 }
@@ -207,15 +216,11 @@ function printPolicySummary(
 function printLaunchDetails(
   cmd: { bin: string; args: string[] },
   cwd: string,
-  activationCmd: { bin: string; args: string[] } | null,
 ) {
   const quote = (a: string) => JSON.stringify(a)
   console.error(fmt.detail(`bin:  ${cmd.bin}`))
   console.error(fmt.detail(`args: ${cmd.args.map(quote).join(" ") || "(none)"}`))
   console.error(fmt.detail(`cwd:  ${cwd}`))
-  if (activationCmd) {
-    console.error(fmt.detail(`focus: ${activationCmd.bin} ${activationCmd.args.map(quote).join(" ")}`))
-  }
 }
 
 main()

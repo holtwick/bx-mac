@@ -82,7 +82,7 @@ For app modes, values before `--` define the sandbox scope (`workdir...`). Value
 
 For `xcode`, this distinction is important: the sandbox workdir is **not** passed as an Xcode open argument. Use `--` if you want to open a specific `.xcworkspace` or `.xcodeproj`.
 
-This behavior is configurable per app via `passWorkdirs` in `~/.bxconfig.toml` (default: `true`, built-in `xcode` default: `false`).
+This behavior is configurable per app via `passPaths` in `~/.bxconfig.toml` (default: `true`, built-in `xcode` default: `false`).
 
 GUI app modes are activated in the foreground on launch (best effort), so the opened app should become the frontmost app.
 
@@ -159,44 +159,44 @@ path = "/usr/local/bin/code"
 
 | Field | Description |
 | --- | --- |
-| `mode` | Inherit from another app (e.g. `"code"`, `"cursor"`) — only `workdirs` / overrides needed |
+| `mode` | Inherit from another app (e.g. `"code"`, `"cursor"`) — only `paths` / overrides needed |
 | `bundle` | macOS bundle identifier — used with `mdfind` to find the app automatically |
 | `binary` | Relative path to the executable inside the `.app` bundle |
 | `path` | Absolute path to the executable **or** `.app` bundle (highest priority, skips discovery) |
 | `fallback` | Absolute fallback path if `mdfind` discovery fails |
 | `args` | Extra arguments always passed to the app |
-| `passWorkdirs` | Whether `workdir...` is forwarded as app launch args (`true`/`false`/`"first"`) |
-| `workdirs` | Default working directories when none are given on the CLI (supports `~/` paths) |
+| `passPaths` | Paths passed as app launch args (`true`/`false`/`N`/`["~/p1", "~/p2"]`) |
+| `paths` | Default working directories when none are given on the CLI (supports `~/` paths) |
 | `background` | Run the app detached in the background by default (`true`/`false`) |
 
 **Resolution order:** `path` → `mdfind` by `bundle` + `binary` → `fallback`
 
-`passWorkdirs` controls launch argument behavior and is independent of sandbox scope. Even with `passWorkdirs = false`, the provided `workdir...` still defines what the sandbox can access. Use `passWorkdirs = "first"` to pass only the first workdir as a launch argument — useful when the app should open one directory but the sandbox should grant access to multiple.
+`passPaths` controls launch argument behavior and is independent of sandbox scope. Even with `passPaths = false`, the provided `workdir...` still defines what the sandbox can access. Use `passPaths = 1` to pass only the first path as a launch argument, or `passPaths = ["~/specific/path"]` to pass explicit paths instead of workdirs.
 
-**Workdir shortcuts with `mode`** let you create named entries that inherit everything from an existing app — just set `mode` and `workdirs`:
+**Workdir shortcuts with `mode`** let you create named entries that inherit everything from an existing app — just set `mode` and `paths`:
 
 ```toml
 # "bx myproject" opens VSCode with these directories
 [myproject]
 mode = "code"
-workdirs = ["~/work/my-project", "~/work/shared-lib"]
+paths = ["~/work/my-project", "~/work/shared-lib"]
 
 # "bx ios" opens Xcode with this directory
 [ios]
 mode = "xcode"
-workdirs = ["~/work/my-ios-app"]
+paths = ["~/work/my-ios-app"]
 ```
 
 Running `bx myproject` inherits VSCode's bundle, binary, args, and everything else — no need to repeat the full app configuration. Own fields override inherited ones, so you can still customize specific settings. Chaining is supported (e.g. `myproject` → `cursor` → `code`).
 
-**Preconfigured workdirs** also work directly on app definitions:
+**Preconfigured paths** also work directly on app definitions:
 
 ```toml
 [code]
-workdirs = ["~/work/my-project", "~/work/shared-lib"]
+paths = ["~/work/my-project", "~/work/shared-lib"]
 ```
 
-Running `bx code` (without arguments) will then open VSCode with both directories sandboxed. CLI arguments always override configured workdirs.
+Running `bx code` (without arguments) will then open VSCode with both directories sandboxed. CLI arguments always override configured paths.
 
 When overriding a built-in app, only the specified fields are replaced — unset fields keep their defaults. See [`bxconfig.example.toml`](bxconfig.example.toml) for a complete reference.
 
@@ -339,7 +339,7 @@ Or preconfigure them in `~/.bxconfig.toml`:
 
 ```toml
 [code]
-workdirs = ["~/work/project-a", "~/work/project-b"]
+paths = ["~/work/project-a", "~/work/project-b"]
 ```
 
 For VSCode specifically, `--profile-sandbox` forces a separate Electron process via an isolated `--user-data-dir`, but this means separate extensions and settings.
@@ -371,6 +371,10 @@ Some AI coding tools ship with their own sandboxing. bx complements these by pro
 - [OpenAI Codex](https://developers.openai.com/codex/concepts/sandboxing) — containerized sandboxing for code execution
 
 These are great when available, but they only protect within their own tool. bx wraps the entire process — so even if a tool's built-in sandbox is misconfigured, disabled, or absent, your files stay protected.
+
+## 🔗 Alternatives
+
+- [Agent Safehouse](https://agent-safehouse.dev/) — macOS kernel-level sandboxing for LLM coding agents via `sandbox-exec`. Deny-first model that blocks write access outside the project directory.
 
 ## 📄 License
 
