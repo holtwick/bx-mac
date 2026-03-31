@@ -48,16 +48,16 @@ async function main() {
 
   // Use preconfigured workdirs from config if none given on CLI
   const app = apps[mode]
-  const effectiveWorkArgs = implicit && app?.workdirs?.length ? app.workdirs : workArgs
+  const effectiveWorkArgs = implicit && app?.paths?.length ? app.paths : workArgs
   const workDirs = effectiveWorkArgs.map((a) => resolve(a.replace(/^~\//, HOME + "/")))
 
-  if (implicit && !app?.workdirs?.length) {
+  if (implicit && !app?.paths?.length) {
     if (workDirs.some((d) => d === HOME)) {
       console.error(`\n${fmt.error("no working directory specified and current directory is $HOME")}\n`)
       console.error(fmt.detail(`Usage:  bx ${mode} <workdir>`))
-      console.error(fmt.detail(`Config: set default workdirs in ~/.bxconfig.toml:\n`))
+      console.error(fmt.detail(`Config: set default paths in ~/.bxconfig.toml:\n`))
       console.error(fmt.detail(`[${mode}]`))
-      console.error(fmt.detail(`workdirs = ["~/work/my-project"]\n`))
+      console.error(fmt.detail(`paths = ["~/work/my-project"]\n`))
       process.exit(1)
     }
     if (!dry) {

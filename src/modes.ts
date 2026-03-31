@@ -15,9 +15,11 @@ function isBuiltinMode(mode: string): mode is BuiltinMode {
   return (BUILTIN_MODES as readonly string[]).includes(mode)
 }
 
-function getWorkdirsToPass(app: AppDefinition, workDirs: string[]): string[] {
-  if (app.passWorkdirs === false) return []
-  if (typeof app.passWorkdirs === "number") return workDirs.slice(0, app.passWorkdirs)
+function getPassPaths(app: AppDefinition, workDirs: string[], home: string): string[] {
+  const val = app.passPaths
+  if (val === false) return []
+  if (typeof val === "number") return workDirs.slice(0, val)
+  if (Array.isArray(val)) return val.map((p) => p.replace(/^~\//, home + "/"))
   return workDirs
 }
 
@@ -126,7 +128,7 @@ function buildAppCommand(
 
   if (app.args) args.push(...app.args)
   if (appArgs.length > 0) args.push(...appArgs)
-  args.push(...getWorkdirsToPass(app, workDirs))
+  args.push(...getPassPaths(app, workDirs, home))
 
   return { bin, args }
 }

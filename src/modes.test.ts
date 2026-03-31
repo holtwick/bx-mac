@@ -10,9 +10,10 @@ const testApps: Record<string, AppDefinition> = {
   code: { ...BUILTIN_APPS.code, path: "/test/VSCode/Electron" },
   xcode: { ...BUILTIN_APPS.xcode, path: "/test/Xcode" },
   custom: { path: "/test/CustomApp", args: ["--flag"] },
-  customNoWorkdirs: { path: "/test/CustomNoWorkdirs", passWorkdirs: false },
-  customFirstWorkdir: { path: "/test/CustomFirst", passWorkdirs: 1 },
-  customFirstTwo: { path: "/test/CustomFirstTwo", passWorkdirs: 2 },
+  customNoPaths: { path: "/test/CustomNoPaths", passPaths: false },
+  customFirstPath: { path: "/test/CustomFirst", passPaths: 1 },
+  customFirstTwo: { path: "/test/CustomFirstTwo", passPaths: 2 },
+  customExplicitPaths: { path: "/test/CustomExplicit", passPaths: ["~/work/a", "~/work/b"] },
   gram: { path: "/Applications/Gram.app" },
 }
 
@@ -79,26 +80,35 @@ describe("buildCommand", () => {
     expect(cmd.args).toContain("/work/a")
   })
 
-  it("custom app can disable forwarding workdirs via passWorkdirs=false", () => {
-    const cmd = buildCommand("customNoWorkdirs", ["/work/a"], home, false, [], testApps)
-    expect(cmd.bin).toBe("/test/CustomNoWorkdirs")
+  it("custom app can disable forwarding paths via passPaths=false", () => {
+    const cmd = buildCommand("customNoPaths", ["/work/a"], home, false, [], testApps)
+    expect(cmd.bin).toBe("/test/CustomNoPaths")
     expect(cmd.args).not.toContain("/work/a")
   })
 
-  it("passWorkdirs=1 passes only the first workdir", () => {
-    const cmd = buildCommand("customFirstWorkdir", ["/work/a", "/work/b", "/work/c"], home, false, [], testApps)
+  it("passPaths=1 passes only the first path", () => {
+    const cmd = buildCommand("customFirstPath", ["/work/a", "/work/b", "/work/c"], home, false, [], testApps)
     expect(cmd.bin).toBe("/test/CustomFirst")
     expect(cmd.args).toContain("/work/a")
     expect(cmd.args).not.toContain("/work/b")
     expect(cmd.args).not.toContain("/work/c")
   })
 
-  it("passWorkdirs=2 passes the first two workdirs", () => {
+  it("passPaths=2 passes the first two paths", () => {
     const cmd = buildCommand("customFirstTwo", ["/work/a", "/work/b", "/work/c"], home, false, [], testApps)
     expect(cmd.bin).toBe("/test/CustomFirstTwo")
     expect(cmd.args).toContain("/work/a")
     expect(cmd.args).toContain("/work/b")
     expect(cmd.args).not.toContain("/work/c")
+  })
+
+  it("passPaths as array passes explicit paths with ~ resolved", () => {
+    const cmd = buildCommand("customExplicitPaths", ["/work/x", "/work/y"], home, false, [], testApps)
+    expect(cmd.bin).toBe("/test/CustomExplicit")
+    expect(cmd.args).toContain("/Users/testuser/work/a")
+    expect(cmd.args).toContain("/Users/testuser/work/b")
+    expect(cmd.args).not.toContain("/work/x")
+    expect(cmd.args).not.toContain("/work/y")
   })
 
   it("normalizes .app path to executable for custom app", () => {

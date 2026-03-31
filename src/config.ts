@@ -17,10 +17,10 @@ export interface AppDefinition {
   fallback?: string
   /** Extra args always passed to the app */
   args?: string[]
-  /** Whether to pass workdirs as launch arguments (default: true, number = first N) */
-  passWorkdirs?: boolean | number
+  /** Which paths to pass as launch arguments (default: true = all workdirs, false = none, number = first N, string[] = explicit paths) */
+  passPaths?: boolean | number | string[]
   /** Preconfigured working directories (used when none given on CLI) */
-  workdirs?: string[]
+  paths?: string[]
   /** Run the app in the background (detached, output to log file) */
   background?: boolean
 }
@@ -37,7 +37,7 @@ export const BUILTIN_APPS: Record<string, AppDefinition> = {
     bundle: "com.apple.dt.Xcode",
     binary: "Contents/MacOS/Xcode",
     fallback: "/Applications/Xcode.app/Contents/MacOS/Xcode",
-    passWorkdirs: false,
+    passPaths: false,
   },
 }
 
@@ -49,6 +49,24 @@ export interface BxConfig {
   apps: Record<string, AppDefinition>
 }
 
+function parsePassPaths(val: unknown): boolean | number | string[] | undefined {
+  if (typeof val === "boolean") return val
+  if (typeof val === "number" && Number.isInteger(val) && val > 0) return val
+  if (Array.isArray(val)) {
+    const paths = val.filter((a): a is string => typeof a === "string")
+    if (paths.length > 0) return paths
+  }
+  return undefined
+}
+
+function parseStringArray(val: unknown): string[] | undefined {
+  if (Array.isArray(val)) {
+    const items = val.filter((a): a is string => typeof a === "string")
+    if (items.length > 0) return items
+  }
+  return undefined
+}
+
 function parseAppDef(def: Record<string, unknown>): AppDefinition {
   return {
     mode: typeof def.mode === "string" ? def.mode : undefined,
@@ -56,9 +74,9 @@ function parseAppDef(def: Record<string, unknown>): AppDefinition {
     binary: typeof def.binary === "string" ? def.binary : undefined,
     path: typeof def.path === "string" ? def.path : undefined,
     fallback: typeof def.fallback === "string" ? def.fallback : undefined,
-    args: Array.isArray(def.args) ? def.args.filter((a): a is string => typeof a === "string") : undefined,
-    passWorkdirs: typeof def.passWorkdirs === "boolean" || (typeof def.passWorkdirs === "number" && Number.isInteger(def.passWorkdirs) && def.passWorkdirs > 0) ? def.passWorkdirs : undefined,
-    workdirs: Array.isArray(def.workdirs) ? def.workdirs.filter((a): a is string => typeof a === "string") : undefined,
+    args: parseStringArray(def.args),
+    passPaths: parsePassPaths(def.passPaths ?? def.passWorkPaths ?? def.passWorkdirs),
+    paths: parseStringArray(def.paths ?? def.workdirs),
     background: typeof def.background === "boolean" ? def.background : undefined,
   }
 }
@@ -79,7 +97,7 @@ export function loadConfig(home: string): BxConfig {
     // [apps.name] takes precedence over [name] if both exist.
     const sections: Record<string, Record<string, unknown>> = {}
 
-    const APP_FIELDS = new Set(["mode", "bundle", "binary", "path", "fallback", "args", "passWorkdirs", "workdirs"])
+    const APP_FIELDS = new Set(["mode", "bundle", "binary", "path", "fallback", "args", "passPaths", "passWorkPaths", "passWorkdirs", "paths", "workdirs", "background"])
     for (const [key, val] of Object.entries(doc)) {
       if (key === "apps") continue
       if (val && typeof val === "object" && !Array.isArray(val)) {

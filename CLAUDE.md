@@ -68,7 +68,7 @@ path = "/Applications/Zed.app/Contents/MacOS/zed"
 # Workdir shortcut — inherits everything from "code"
 [myproject]
 mode = "code"
-workdirs = ["~/work/my-project", "~/work/shared-lib"]
+paths = ["~/work/my-project", "~/work/shared-lib"]
 ```
 
 Available fields per app:
@@ -81,8 +81,8 @@ Available fields per app:
 | `binary` | Relative path to executable inside the `.app` bundle |
 | `fallback` | Absolute fallback path if discovery fails |
 | `args` | Extra arguments always passed to the app |
-| `passWorkdirs` | Whether workdirs are forwarded as launch args (`true`/`false`/`N`) |
-| `workdirs` | Default working directories when none given on CLI (supports `~/` paths) |
+| `passPaths` | Paths passed as launch args (`true`/`false`/`N`/`["~/p1", "~/p2"]`) |
+| `paths` | Default working directories when none given on CLI (supports `~/` paths) |
 | `background` | Run the app detached in the background, output to log file (`true`/`false`) |
 
 App resolution order: `path` (explicit) → `bundle` + `binary` (mdfind auto-discovery) → `fallback` (hardcoded). See `bxconfig.example.toml` for all options.
