@@ -114,8 +114,14 @@ async function main() {
     console.error(fmt.detail(nestedSandboxWarning))
   }
 
+  printLaunchDetails(cmd, workDirs[0])
+
   if (verbose) {
-    printLaunchDetails(cmd, workDirs[0], getActivationCommand(mode, apps))
+    const activationCmd = getActivationCommand(mode, apps)
+    if (activationCmd) {
+      const quote = (a: string) => JSON.stringify(a)
+      console.error(fmt.detail(`focus: ${activationCmd.bin} ${activationCmd.args.map(quote).join(" ")}`))
+    }
   }
 
   console.error("")
@@ -207,15 +213,11 @@ function printPolicySummary(
 function printLaunchDetails(
   cmd: { bin: string; args: string[] },
   cwd: string,
-  activationCmd: { bin: string; args: string[] } | null,
 ) {
   const quote = (a: string) => JSON.stringify(a)
   console.error(fmt.detail(`bin:  ${cmd.bin}`))
   console.error(fmt.detail(`args: ${cmd.args.map(quote).join(" ") || "(none)"}`))
   console.error(fmt.detail(`cwd:  ${cwd}`))
-  if (activationCmd) {
-    console.error(fmt.detail(`focus: ${activationCmd.bin} ${activationCmd.args.map(quote).join(" ")}`))
-  }
 }
 
 main()
