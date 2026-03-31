@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
     "target": "ES2022",
-    "module": "ES2022",
+    "module": "ES2025",
     "moduleResolution": "bundler",
     "strict": true,
     "esModuleInterop": true,

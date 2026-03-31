@@ -1,4 +1,4 @@
-import { writeFileSync, rmSync, openSync } from "node:fs"
+import { writeFileSync, rmSync, openSync, mkdtempSync, realpathSync } from "node:fs"
 import { join, resolve, dirname } from "node:path"
 import { spawn } from "node:child_process"
 import { createInterface } from "node:readline"
@@ -49,7 +49,7 @@ async function main() {
   // Use preconfigured workdirs from config if none given on CLI
   const app = apps[mode]
   const effectiveWorkArgs = implicit && app?.paths?.length ? app.paths : workArgs
-  const workDirs = effectiveWorkArgs.map((a) => resolve(a.replace(/^~\//, HOME + "/")))
+  const workDirs = effectiveWorkArgs.map((a) => realpathSync(resolve(a.replace(/^~\//, HOME + "/"))))
 
   if (implicit && !app?.paths?.length) {
     if (workDirs.some((d) => d === HOME)) {
@@ -103,8 +103,9 @@ async function main() {
 
   // --- Launch sandboxed process ---
 
-  const profilePath = join("/tmp", `bx-${process.pid}.sb`)
-  writeFileSync(profilePath, profile)
+  const tmpDir = mkdtempSync(join("/tmp", "bx-"))
+  const profilePath = join(tmpDir, "profile.sb")
+  writeFileSync(profilePath, profile, { mode: 0o600 })
 
   const cmd = buildCommand(mode, workDirs, HOME, profileSandbox, appArgs, apps)
   const background = backgroundFlag || app?.background === true
@@ -127,8 +128,8 @@ async function main() {
   console.error("")
 
   if (background) {
-    const logPath = join("/tmp", `bx-${process.pid}.log`)
-    const logFd = openSync(logPath, "a")
+    const logPath = join(tmpDir, "bx.log")
+    const logFd = openSync(logPath, "a", 0o600)
 
     const child = spawn("sandbox-exec", [
       "-f", profilePath,
@@ -166,8 +167,10 @@ async function main() {
 
   bringAppToFront(mode, apps)
 
+  const cleanup = () => { try { rmSync(tmpDir, { recursive: true, force: true }) } catch {} }
+  process.on("exit", cleanup)
+
   child.on("close", (code: number | null) => {
-    rmSync(profilePath, { force: true })
     process.exit(code ?? 0)
   })
 }
