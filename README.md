@@ -376,6 +376,14 @@ These are great when available, but they only protect within their own tool. bx 
 
 - [Agent Safehouse](https://agent-safehouse.dev/) — macOS kernel-level sandboxing for LLM coding agents via `sandbox-exec`. Deny-first model that blocks write access outside the project directory.
 
+## 💛 Sponsor
+
+If you find bx useful, consider supporting its development:
+
+[GitHub Sponsors](https://github.com/sponsors/holtwick) - [Liberapay](https://liberapay.com/holtwick) - [Buy Me a Coffee](https://buymeacoffee.com/holtwick) - [Patreon](https://patreon.com/holtwick) - [Open Collective](https://opencollective.com/holtwick)
+
+Also check out my other projects: [Receipts](https://receipts-app.com) - [PDFify](https://pdfify.app)
+
 ## 📄 License
 
 MIT — see [LICENSE](LICENSE).
