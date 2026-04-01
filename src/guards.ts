@@ -70,10 +70,11 @@ export async function checkAppAlreadyRunning(mode: string, apps: Record<string, 
       timeout: 3000,
     })
     if (!list.includes(`bundleID="${app.bundle}"`)) return
-    // extract display name from lsappinfo entry containing this bundle
+    // lsappinfo format: line N has '"AppName" ASN:...', line N+1 has '    bundleID="..."'
     const idx = list.indexOf(`bundleID="${app.bundle}"`)
-    const before = list.lastIndexOf("\n", idx)
-    const entryLine = list.slice(before === -1 ? 0 : before, idx)
+    const bundleLine = list.lastIndexOf("\n", idx)
+    const prevLine = list.lastIndexOf("\n", bundleLine - 1)
+    const entryLine = list.slice(prevLine === -1 ? 0 : prevLine, bundleLine)
     const nameMatch = entryLine.match(/"([^"]+)"/)
     if (nameMatch) appName = nameMatch[1]
   } catch {
@@ -91,7 +92,7 @@ export async function checkAppAlreadyRunning(mode: string, apps: Record<string, 
 
   const rl = createInterface({ input: process.stdin, output: process.stderr })
   const answer = await new Promise<string>((res) => {
-    rl.question(`   continue without sandbox? [y/N] `, res)
+    rl.question(`   continue with existing instance? [y/N]`, res)
   })
   rl.close()
 
