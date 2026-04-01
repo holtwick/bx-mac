@@ -8,10 +8,15 @@ This repository contains a macOS sandbox solution to launch applications in a pr
 
 ## Files
 
-- **`src/index.ts`** — Main source (TypeScript). Scans `$HOME`, generates a sandbox profile dynamically, and launches the target application inside `sandbox-exec`.
+- **`src/index.ts`** — Main entry point. Orchestrates config loading, sandbox profile generation, and launches the target app via `sandbox-exec`.
 - **`src/config.ts`** — App configuration: TOML config loading, built-in app definitions, auto-discovery via `mdfind`.
 - **`src/args.ts`** — CLI argument parsing with dynamic mode validation.
 - **`src/modes.ts`** — Command building for all modes (shell builtins + configured apps).
+- **`src/profile.ts`** — Sandbox profile generation: home scanning, blocklist assembly, SBPL output.
+- **`src/guards.ts`** — Safety checks: sandbox nesting, external sandbox detection, workdir validation, app-already-running.
+- **`src/drytree.ts`** — `--dry` tree output: visual display of protected/accessible paths.
+- **`src/help.ts`** — `--help` output.
+- **`src/fmt.ts`** — Terminal formatting helpers (colors, icons, labels).
 - **`bxconfig.example.toml`** — Example config with all built-in apps and common extras.
 - **`rolldown.config.ts`** — Rolldown bundler config. Builds `dist/bx.js` (ESM, Node shebang).
 - **`dist/bx.js`** — Built CLI entry point (generated, not committed).
