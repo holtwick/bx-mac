@@ -63,21 +63,25 @@ export async function checkAppAlreadyRunning(mode: string, apps: Record<string, 
   const app = apps[mode]
   if (!app?.bundle) return
 
-  let running = false
+  let appName = mode
   try {
     const list = execFileSync("lsappinfo", ["list"], {
       encoding: "utf-8",
       timeout: 3000,
     })
-    running = list.includes(`bundleID="${app.bundle}"`)
+    if (!list.includes(`bundleID="${app.bundle}"`)) return
+    // extract display name from lsappinfo entry containing this bundle
+    const idx = list.indexOf(`bundleID="${app.bundle}"`)
+    const before = list.lastIndexOf("\n", idx)
+    const entryLine = list.slice(before === -1 ? 0 : before, idx)
+    const nameMatch = entryLine.match(/"([^"]+)"/)
+    if (nameMatch) appName = nameMatch[1]
   } catch {
     // lsappinfo failed — skip check silently
     return
   }
 
-  if (!running) return
-
-  console.error(`\n${fmt.warn(`"${mode}" is already running`)}`)
+  console.error(`\n${fmt.warn(`"${appName}" is already running`)}`)
   console.error(fmt.detail("the workspace will open in the EXISTING instance — sandbox will NOT apply"))
   if (mode === "code") {
     console.error(fmt.detail("quit the app first, or use --profile-sandbox for an isolated instance"))
