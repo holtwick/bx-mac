@@ -1,8 +1,7 @@
 import { writeFileSync, rmSync, openSync, mkdtempSync, realpathSync } from "node:fs"
-import { join, resolve, dirname } from "node:path"
+import { dirname, join, resolve } from "node:path"
 import { spawn } from "node:child_process"
 import { createInterface } from "node:readline"
-import { fileURLToPath } from "node:url"
 import process from "node:process"
 import { checkOwnSandbox, checkVSCodeTerminal, checkExternalSandbox, checkWorkDirs, checkAppAlreadyRunning } from "./guards.js"
 import { parseArgs } from "./args.js"
@@ -13,10 +12,12 @@ import { printHelp } from "./help.js"
 import { printDryRunTree } from "./drytree.js"
 import { fmt } from "./fmt.js"
 
-const __dirname = dirname(fileURLToPath(import.meta.url))
-
+// @ts-ignore - bundled by rolldown, replaced at build time
 import pkg from "../package.json" with { type: "json" }
-const VERSION = pkg.version
+const VERSION: string = pkg.version
+
+import { fileURLToPath } from "node:url"
+const __dirname = dirname(fileURLToPath(import.meta.url))
 
 // --- Early exits: --version / --help (before HOME check) ---
 
