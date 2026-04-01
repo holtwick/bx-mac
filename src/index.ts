@@ -41,6 +41,10 @@ const HOME: string = process.env.HOME
 // --- Main ---
 
 async function main() {
+  // Sandbox checks must run before any filesystem access (realpathSync etc.)
+  checkOwnSandbox()
+  checkExternalSandbox()
+
   const config = loadConfig(HOME)
   const apps = getAvailableApps(config)
   const validModes = getValidModes(apps)
@@ -66,9 +70,7 @@ async function main() {
   }
 
   if (!dry) {
-    checkOwnSandbox()
     checkVSCodeTerminal()
-    checkExternalSandbox()
   }
 
   checkWorkDirs(workDirs, HOME)
