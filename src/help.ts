@@ -44,6 +44,7 @@ Options:
   --profile-sandbox    use an isolated VSCode profile (code mode only)
   -v, --version        show version
   -h, --help           show this help
+  --docs               open documentation in browser
 
 Configuration:
   ~/.bxconfig.toml     app definitions (TOML):

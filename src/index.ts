@@ -1,6 +1,6 @@
 import { writeFileSync, rmSync, openSync, mkdtempSync, realpathSync } from "node:fs"
 import { dirname, join, resolve } from "node:path"
-import { spawn } from "node:child_process"
+import { spawn, execSync } from "node:child_process"
 import { createInterface } from "node:readline"
 import process from "node:process"
 import { checkOwnSandbox, checkVSCodeTerminal, checkExternalSandbox, checkWorkDirs, checkAppAlreadyRunning } from "./guards.js"
@@ -28,6 +28,11 @@ if (process.argv.includes("--version") || process.argv.includes("-v")) {
 
 if (process.argv.includes("--help") || process.argv.includes("-h")) {
   printHelp(VERSION)
+  process.exit(0)
+}
+
+if (process.argv.includes("--docs")) {
+  execSync("open https://github.com/holtwick/bx-mac")
   process.exit(0)
 }
 
@@ -63,6 +68,8 @@ async function main() {
       console.error(fmt.detail(`Config: set default paths in ~/.bxconfig.toml:\n`))
       console.error(fmt.detail(`[${mode}]`))
       console.error(fmt.detail(`paths = ["~/work/my-project"]\n`))
+      console.error(fmt.detail(`Run bx --help for more info.`))
+      console.error(fmt.detail(`Docs: https://github.com/holtwick/bx-mac\n`))
       process.exit(1)
     }
     if (!dry) {
