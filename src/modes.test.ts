@@ -37,7 +37,7 @@ describe("buildCommand", () => {
     expect(cmd.args).toContain("/work/b")
   })
 
-  it("code mode with --profile-sandbox adds data/extensions dirs", () => {
+  it("code mode with --vscode-user adds data/extensions dirs", () => {
     const cmd = buildCommand("code", ["/work/a"], home, true, [], testApps)
     expect(cmd.args).toContain("--user-data-dir")
     expect(cmd.args).toContain("--extensions-dir")

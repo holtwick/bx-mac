@@ -94,26 +94,26 @@ describe("parseArgs", () => {
     expect(result.mode).toBe("term")
   })
 
-  it("parses --profile flag (bare)", () => {
-    argv("--profile", "code", "/tmp/project")
+  it("parses --vscode-user flag (bare)", () => {
+    argv("--vscode-user", "code", "/tmp/project")
     const result = parseArgs(ALL_MODES)
-    expect(result.profile).toBe(true)
+    expect(result.vscodeUser).toBe(true)
     expect(result.mode).toBe("code")
     expect(result.workArgs).toEqual(["/tmp/project"])
   })
 
-  it("parses --profile with path", () => {
-    argv("--profile", "~/my-profile", "code", "/tmp/project")
+  it("parses --vscode-user with path", () => {
+    argv("--vscode-user", "~/my-profile", "code", "/tmp/project")
     const result = parseArgs(ALL_MODES)
-    expect(result.profile).toBe("~/my-profile")
+    expect(result.vscodeUser).toBe("~/my-profile")
     expect(result.mode).toBe("code")
     expect(result.workArgs).toEqual(["/tmp/project"])
   })
 
-  it("parses --profile-sandbox alias", () => {
-    argv("--profile-sandbox", "code", "/tmp/project")
+  it("parses --vscode-user-data alias", () => {
+    argv("--vscode-user-data", "code", "/tmp/project")
     const result = parseArgs(ALL_MODES)
-    expect(result.profile).toBe(true)
+    expect(result.vscodeUser).toBe(true)
   })
 
   it("exec mode without -- aborts", () => {

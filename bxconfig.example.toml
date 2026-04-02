@@ -28,70 +28,70 @@
   passPaths = false
   # paths = ["~/work/my-ios-app"]
 
-# --- Finding bundle IDs ---
-# Run: osascript -e 'id of app "AppName"'
-# Using bundle IDs is recommended over paths — they survive app updates,
-# relocations, and name changes.
+  # --- Finding bundle IDs ---
+  # Run: osascript -e 'id of app "AppName"'
+  # Using bundle IDs is recommended over paths — they survive app updates,
+  # relocations, and name changes.
 
-# --- Examples for additional apps ---
+  # --- Examples for additional apps ---
 
-# [cursor]
-# bundle = "com.todesktop.230313mzl4w4u92"
-# binary = "Contents/MacOS/Cursor"
-# args = ["--no-sandbox"]
-# passPaths = true
-# paths = ["~/work/project-b"]
+  # [cursor]
+  # bundle = "com.todesktop.230313mzl4w4u92"
+  # binary = "Contents/MacOS/Cursor"
+  # args = ["--no-sandbox"]
+  # passPaths = true
+  # paths = ["~/work/project-b"]
 
-# [zed]
-# bundle = "dev.zed.Zed"
-# binary = "Contents/MacOS/zed"
+  # [zed]
+  # bundle = "dev.zed.Zed"
+  # binary = "Contents/MacOS/zed"
 
-# [fleet]
-# path = "/Applications/Fleet.app/Contents/MacOS/Fleet"
+  # [fleet]
+  # path = "/Applications/Fleet.app/Contents/MacOS/Fleet"
 
-# [sublime]
-# bundle = "com.sublimetext.4"
-# binary = "Contents/MacOS/sublime_text"
+  # [sublime]
+  # bundle = "com.sublimetext.4"
+  # binary = "Contents/MacOS/sublime_text"
 
-# --- Workdir shortcuts (inherit from another app via mode) ---
-# Only paths needed — everything else is inherited from the referenced app.
+  # --- Workdir shortcuts (inherit from another app via mode) ---
+  # Only paths needed — everything else is inherited from the referenced app.
 
-# [myproject]
-# mode = "code"
-# paths = ["~/work/my-project", "~/work/shared-lib"]
+  # [myproject]
+  # mode = "code"
+  # paths = ["~/work/my-project", "~/work/shared-lib"]
 
-# [ios]
-# mode = "xcode"
-# paths = ["~/work/my-ios-app"]
+  # [ios]
+  # mode = "xcode"
+  # paths = ["~/work/my-ios-app"]
 
-# --- profile option ---
-# profile = true                    — use an isolated profile (data in ~/.vscode-sandbox/)
-# profile = "~/my-vscode-profile"   — use a custom path for profile data
-# Can also be enabled per-invocation with: bx --profile [path] <mode> [workdir...]
+  # --- profile option ---
+  # profile = true                    — use an isolated profile (data in ~/.vscode-sandbox/)
+  # profile = "~/my-vscode-profile"   — use a custom path for profile data
+  # Can also be enabled per-invocation with: bx --vscode-user [path] <mode> [workdir...]
 
-# --- background option ---
-# background = true — run the app detached (like nohup &), output goes to /tmp/bx-<pid>.log
-# Can also be enabled per-invocation with: bx --background <mode> [workdir...]
+  # --- background option ---
+  # background = true — run the app detached (like nohup &), output goes to /tmp/bx-<pid>.log
+  # Can also be enabled per-invocation with: bx --background <mode> [workdir...]
 
-# [myserver]
-# mode = "exec"
-# background = true
-# paths = ["~/work/my-server"]
+  # [myserver]
+  # mode = "exec"
+  # background = true
+  # paths = ["~/work/my-server"]
 
-# --- passPaths options ---
-# true              — all paths are passed as launch arguments (default)
-# false             — no paths are passed (e.g. xcode)
-# N                 — only the first N paths are passed (sandbox covers all)
-# ["~/p1", "~/p2"]  — pass these explicit paths instead of workdirs
+  # --- passPaths options ---
+  # true              — all paths are passed as launch arguments (default)
+  # false             — no paths are passed (e.g. xcode)
+  # N                 — only the first N paths are passed (sandbox covers all)
+  # ["~/p1", "~/p2"]  — pass these explicit paths instead of workdirs
 
-# [web]
-# bundle = "com.example.browser"
-# binary = "Contents/MacOS/Browser"
-# args = ["--no-sandbox"]
-# passPaths = 1
-# paths = ["~/work/main-project", "~/work/shared-deps"]
+  # [web]
+  # bundle = "com.example.browser"
+  # binary = "Contents/MacOS/Browser"
+  # args = ["--no-sandbox"]
+  # passPaths = 1
+  # paths = ["~/work/main-project", "~/work/shared-deps"]
 
-# [myeditor]
-# mode = "code"
-# passPaths = ["~/work/main-project"]
-# paths = ["~/work/main-project", "~/work/shared-deps"]
+  # [myeditor]
+  # mode = "code"
+  # passPaths = ["~/work/main-project"]
+  # paths = ["~/work/main-project", "~/work/shared-deps"]

@@ -122,6 +122,9 @@ bx --dry ~/work/my-project
 
 # 🔍 See the generated sandbox profile
 bx --verbose ~/work/my-project
+
+# 🔄 Use an isolated app profile
+bx --vscode-user code ~/work/my-project
 ```
 
 ## ⚙️ Options
@@ -131,7 +134,7 @@ bx --verbose ~/work/my-project
 | `--dry` | Show a tree of all protected, read-only, and accessible paths — don't launch anything |
 | `--verbose` | Print the generated sandbox profile plus launch details (binary, arguments, cwd, focus command) |
 | `--background` | Run the app detached in the background (like `nohup &`), output goes to `/tmp/bx-<pid>.log` |
-| `--profile [path]` | Use an isolated app profile (default: `~/.vscode-sandbox`, or specify a custom path) |
+| `--vscode-user [path]` | Use an isolated app profile (default: `~/.vscode-sandbox`, or specify a custom path) |
 
 On normal runs, bx also prints a short policy summary (number of workdirs, blocked directories, hidden paths, and read-only directories).
 
@@ -343,7 +346,7 @@ Or preconfigure them in `~/.bxconfig.toml`:
 paths = ["~/work/project-a", "~/work/project-b"]
 ```
 
-For VSCode specifically, `--profile` forces a separate Electron process via an isolated `--user-data-dir`, but this means separate extensions and settings. You can specify a custom path (`--profile ~/my-profile`) or use the default (`--profile` alone uses `~/.vscode-sandbox`). This can also be configured per app in `~/.bxconfig.toml` via the `profile` field.
+For VSCode specifically, `--vscode-user` forces a separate Electron process via an isolated `--user-data-dir`, but this means separate extensions and settings. You can specify a custom path (`--vscode-user ~/my-profile`) or use the default (`--vscode-user` alone uses `~/.vscode-sandbox`). This can also be configured per app in `~/.bxconfig.toml` via the `profile` field.
 
 ## 💡 Tips
 
@@ -370,6 +373,7 @@ Some AI coding tools ship with their own sandboxing. bx complements these by pro
 - [Claude Code](https://code.claude.com/docs/en/sandboxing) — built-in sandbox for file and command restrictions
 - [Gemini CLI](https://geminicli.com/docs/cli/sandbox/) — sandbox mode for file system access control
 - [OpenAI Codex](https://developers.openai.com/codex/concepts/sandboxing) — containerized sandboxing for code execution
+- [VS Code Copilot](https://code.visualstudio.com/docs/copilot/agents/agent-tools#_sandbox-agent-commands) — agent sandbox mode (preview) that restricts write access to the working directory and blocks network access for terminal commands (`chat.agent.sandbox` setting)
 
 These are great when available, but they only protect within their own tool. bx wraps the entire process — so even if a tool's built-in sandbox is misconfigured, disabled, or absent, your files stay protected.
 

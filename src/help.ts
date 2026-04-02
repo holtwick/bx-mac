@@ -41,7 +41,7 @@ Options:
   --dry                show what will be protected, don't launch
   --verbose            print the generated sandbox profile
   --background         run in background, log output to /tmp/bx-<pid>.log
-  --profile [path]     use an isolated app profile (default: ~/.vscode-sandbox)
+  --vscode-user [path] use an isolated app profile (default: ~/.vscode-sandbox)
   -v, --version        show version
   -h, --help           show this help
   --docs               open documentation in browser

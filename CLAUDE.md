@@ -47,8 +47,8 @@ bx zed [workdir]                            # if configured
 bx --dry ~/work/my-project                  # show what will be protected
 bx --verbose term ~/work/my-project         # print generated .sb profile
 bx --background code ~/work/my-project      # run in background, log to /tmp
-bx --profile code ~/work/my-project         # isolated app profile (default path)
-bx --profile ~/my-profile code ~/work/my-project # isolated app profile (custom path)
+bx --vscode-user code ~/work/my-project      # isolated app profile (default path)
+bx --vscode-user ~/my-profile code ~/work/my-project # isolated app profile (custom path)
 bx xcode ~/work/my-ios-app -- MyApp.xcworkspace # sandbox dir + explicit open target
 ```
 

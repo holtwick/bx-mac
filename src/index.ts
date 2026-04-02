@@ -54,7 +54,7 @@ async function main() {
   const config = loadConfig(HOME)
   const apps = getAvailableApps(config)
   const validModes = getValidModes(apps)
-  const { mode, workArgs, verbose, dry, profile: profileFlag, background: backgroundFlag, appArgs, implicit } = parseArgs(validModes)
+  const { mode, workArgs, verbose, dry, vscodeUser: vscodeUserFlag, background: backgroundFlag, appArgs, implicit } = parseArgs(validModes)
 
   // Use preconfigured workdirs from config if none given on CLI
   const app = apps[mode]
@@ -84,8 +84,8 @@ async function main() {
   checkWorkDirs(workDirs, HOME)
   await checkAppAlreadyRunning(mode, apps)
 
-  // Merge profile: CLI flag overrides config value
-  const profileSandbox = profileFlag !== false ? profileFlag : app?.profile ?? false
+  // Merge vscode-user: CLI flag overrides config value
+  const profileSandbox = vscodeUserFlag !== false ? vscodeUserFlag : app?.profile ?? false
 
   if (profileSandbox) {
     await setupVSCodeProfile(HOME, profileSandbox)
@@ -180,7 +180,7 @@ async function main() {
 
   bringAppToFront(mode, apps)
 
-  const cleanup = () => { try { rmSync(tmpDir, { recursive: true, force: true }) } catch {} }
+  const cleanup = () => { try { rmSync(tmpDir, { recursive: true, force: true }) } catch { } }
   process.on("exit", cleanup)
 
   child.on("close", (code: number | null) => {
