@@ -88,7 +88,7 @@ async function main() {
   const profileSandbox = profileFlag !== false ? profileFlag : app?.profile ?? false
 
   if (profileSandbox) {
-    setupVSCodeProfile(HOME, profileSandbox)
+    await setupVSCodeProfile(HOME, profileSandbox)
   }
 
   // --- Build sandbox profile ---

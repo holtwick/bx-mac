@@ -1,6 +1,7 @@
 import { cpSync, existsSync, mkdirSync } from "node:fs"
 import { join, basename, resolve } from "node:path"
 import { spawn, execFileSync } from "node:child_process"
+import { createInterface } from "node:readline"
 import process from "node:process"
 import type { AppDefinition } from "./config.js"
 import { resolveAppPath, BUILTIN_MODES, type BuiltinMode } from "./config.js"
@@ -63,16 +64,25 @@ export function resolveProfileDir(home: string, profile: boolean | string): stri
   return join(home, ".vscode-sandbox")
 }
 
-export function setupVSCodeProfile(home: string, profile: boolean | string) {
+export async function setupVSCodeProfile(home: string, profile: boolean | string) {
   const dataDir = resolveProfileDir(home, profile)
   const globalExt = join(home, ".vscode", "extensions")
   const localExt = join(dataDir, "extensions")
 
   mkdirSync(dataDir, { recursive: true })
   if (!existsSync(localExt) && existsSync(globalExt)) {
-    console.error(fmt.detail("copying extensions from global install..."))
-    cpSync(globalExt, localExt, { recursive: true })
+    const rl = createInterface({ input: process.stdin, output: process.stderr })
+    const answer = await new Promise<string>((res) => {
+      rl.question(`${fmt.info(`copy extensions to ${dataDir}?`)} [Y/n] `, res)
+    })
+    rl.close()
+    if (!answer || answer.match(/^y(es)?$/i)) {
+      console.error(fmt.detail("copying extensions from global install..."))
+      cpSync(globalExt, localExt, { recursive: true })
+    }
   }
+
+  console.error(fmt.detail(`profile: ${dataDir}`))
 }
 
 export function buildCommand(
