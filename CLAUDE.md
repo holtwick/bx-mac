@@ -47,7 +47,8 @@ bx zed [workdir]                            # if configured
 bx --dry ~/work/my-project                  # show what will be protected
 bx --verbose term ~/work/my-project         # print generated .sb profile
 bx --background code ~/work/my-project      # run in background, log to /tmp
-bx code --profile-sandbox ~/work/my-project # isolated VSCode profile
+bx --profile code ~/work/my-project         # isolated app profile (default path)
+bx --profile ~/my-profile code ~/work/my-project # isolated app profile (custom path)
 bx xcode ~/work/my-ios-app -- MyApp.xcworkspace # sandbox dir + explicit open target
 ```
 
@@ -89,6 +90,7 @@ Available fields per app:
 | `passPaths` | Paths passed as launch args (`true`/`false`/`N`/`["~/p1", "~/p2"]`) |
 | `paths` | Default working directories when none given on CLI (supports `~/` paths) |
 | `background` | Run the app detached in the background, output to log file (`true`/`false`) |
+| `profile` | Use an isolated app profile (`true` = default `~/.vscode-sandbox`, `"path"` = custom path) |
 
 App resolution order: `path` (explicit) → `bundle` + `binary` (mdfind auto-discovery) → `fallback` (hardcoded). See `bxconfig.example.toml` for all options.
 

@@ -64,6 +64,11 @@
 # mode = "xcode"
 # paths = ["~/work/my-ios-app"]
 
+# --- profile option ---
+# profile = true                    — use an isolated profile (data in ~/.vscode-sandbox/)
+# profile = "~/my-vscode-profile"   — use a custom path for profile data
+# Can also be enabled per-invocation with: bx --profile [path] <mode> [workdir...]
+
 # --- background option ---
 # background = true — run the app detached (like nohup &), output goes to /tmp/bx-<pid>.log
 # Can also be enabled per-invocation with: bx --background <mode> [workdir...]

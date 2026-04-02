@@ -94,10 +94,26 @@ describe("parseArgs", () => {
     expect(result.mode).toBe("term")
   })
 
-  it("parses --profile-sandbox flag", () => {
-    argv("--profile-sandbox", "/tmp/project")
+  it("parses --profile flag (bare)", () => {
+    argv("--profile", "code", "/tmp/project")
     const result = parseArgs(ALL_MODES)
-    expect(result.profileSandbox).toBe(true)
+    expect(result.profile).toBe(true)
+    expect(result.mode).toBe("code")
+    expect(result.workArgs).toEqual(["/tmp/project"])
+  })
+
+  it("parses --profile with path", () => {
+    argv("--profile", "~/my-profile", "code", "/tmp/project")
+    const result = parseArgs(ALL_MODES)
+    expect(result.profile).toBe("~/my-profile")
+    expect(result.mode).toBe("code")
+    expect(result.workArgs).toEqual(["/tmp/project"])
+  })
+
+  it("parses --profile-sandbox alias", () => {
+    argv("--profile-sandbox", "code", "/tmp/project")
+    const result = parseArgs(ALL_MODES)
+    expect(result.profile).toBe(true)
   })
 
   it("exec mode without -- aborts", () => {

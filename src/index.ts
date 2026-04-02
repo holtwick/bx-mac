@@ -54,7 +54,7 @@ async function main() {
   const config = loadConfig(HOME)
   const apps = getAvailableApps(config)
   const validModes = getValidModes(apps)
-  const { mode, workArgs, verbose, dry, profileSandbox, background: backgroundFlag, appArgs, implicit } = parseArgs(validModes)
+  const { mode, workArgs, verbose, dry, profile: profileFlag, background: backgroundFlag, appArgs, implicit } = parseArgs(validModes)
 
   // Use preconfigured workdirs from config if none given on CLI
   const app = apps[mode]
@@ -84,8 +84,11 @@ async function main() {
   checkWorkDirs(workDirs, HOME)
   await checkAppAlreadyRunning(mode, apps)
 
-  if (mode === "code" && profileSandbox) {
-    setupVSCodeProfile(HOME)
+  // Merge profile: CLI flag overrides config value
+  const profileSandbox = profileFlag !== false ? profileFlag : app?.profile ?? false
+
+  if (profileSandbox) {
+    setupVSCodeProfile(HOME, profileSandbox)
   }
 
   // --- Build sandbox profile ---

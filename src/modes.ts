@@ -1,5 +1,5 @@
 import { cpSync, existsSync, mkdirSync } from "node:fs"
-import { join, basename } from "node:path"
+import { join, basename, resolve } from "node:path"
 import { spawn, execFileSync } from "node:child_process"
 import process from "node:process"
 import type { AppDefinition } from "./config.js"
@@ -58,8 +58,13 @@ export function hasAppSandboxEntitlement(entitlements: string): boolean {
 
 // --- Public API ---
 
-export function setupVSCodeProfile(home: string) {
-  const dataDir = join(home, ".vscode-sandbox")
+export function resolveProfileDir(home: string, profile: boolean | string): string {
+  if (typeof profile === "string") return resolve(profile.replace(/^~\//, home + "/"))
+  return join(home, ".vscode-sandbox")
+}
+
+export function setupVSCodeProfile(home: string, profile: boolean | string) {
+  const dataDir = resolveProfileDir(home, profile)
   const globalExt = join(home, ".vscode", "extensions")
   const localExt = join(dataDir, "extensions")
 
@@ -74,7 +79,7 @@ export function buildCommand(
   mode: string,
   workDirs: string[],
   home: string,
-  profileSandbox: boolean,
+  profileSandbox: boolean | string,
   appArgs: string[],
   apps: Record<string, AppDefinition>,
 ): Command {
@@ -99,7 +104,7 @@ function buildAppCommand(
   mode: string,
   workDirs: string[],
   home: string,
-  profileSandbox: boolean,
+  profileSandbox: boolean | string,
   appArgs: string[],
   apps: Record<string, AppDefinition>,
 ): Command {
@@ -120,8 +125,8 @@ function buildAppCommand(
   const bin = executableFromBundle(resolvedPath, app)
   const args: string[] = []
 
-  if (mode === "code" && profileSandbox) {
-    const dataDir = join(home, ".vscode-sandbox")
+  if (profileSandbox) {
+    const dataDir = resolveProfileDir(home, profileSandbox)
     args.push("--user-data-dir", join(dataDir, "data"))
     args.push("--extensions-dir", join(dataDir, "extensions"))
   }

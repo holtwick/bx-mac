@@ -131,7 +131,7 @@ bx --verbose ~/work/my-project
 | `--dry` | Show a tree of all protected, read-only, and accessible paths — don't launch anything |
 | `--verbose` | Print the generated sandbox profile plus launch details (binary, arguments, cwd, focus command) |
 | `--background` | Run the app detached in the background (like `nohup &`), output goes to `/tmp/bx-<pid>.log` |
-| `--profile-sandbox` | Use an isolated VSCode profile (separate extensions/settings, `code` mode only) |
+| `--profile [path]` | Use an isolated app profile (default: `~/.vscode-sandbox`, or specify a custom path) |
 
 On normal runs, bx also prints a short policy summary (number of workdirs, blocked directories, hidden paths, and read-only directories).
 
@@ -168,6 +168,7 @@ path = "/usr/local/bin/code"
 | `passPaths` | Paths passed as app launch args (`true`/`false`/`N`/`["~/p1", "~/p2"]`) |
 | `paths` | Default working directories when none are given on the CLI (supports `~/` paths) |
 | `background` | Run the app detached in the background by default (`true`/`false`) |
+| `profile` | Use an isolated app profile (`true` = `~/.vscode-sandbox`, `"path"` = custom path) |
 
 **Resolution order:** `path` → `mdfind` by `bundle` + `binary` → `fallback`
 
@@ -342,7 +343,7 @@ Or preconfigure them in `~/.bxconfig.toml`:
 paths = ["~/work/project-a", "~/work/project-b"]
 ```
 
-For VSCode specifically, `--profile-sandbox` forces a separate Electron process via an isolated `--user-data-dir`, but this means separate extensions and settings.
+For VSCode specifically, `--profile` forces a separate Electron process via an isolated `--user-data-dir`, but this means separate extensions and settings. You can specify a custom path (`--profile ~/my-profile`) or use the default (`--profile` alone uses `~/.vscode-sandbox`). This can also be configured per app in `~/.bxconfig.toml` via the `profile` field.
 
 ## 💡 Tips
 

@@ -23,6 +23,8 @@ export interface AppDefinition {
   paths?: string[]
   /** Run the app in the background (detached, output to log file) */
   background?: boolean
+  /** Use an isolated app profile (true = default path, string = custom path) */
+  profile?: boolean | string
 }
 
 /** Built-in app definitions — always available, can be overridden via config */
@@ -78,6 +80,7 @@ function parseAppDef(def: Record<string, unknown>): AppDefinition {
     passPaths: parsePassPaths(def.passPaths ?? def.passWorkPaths ?? def.passWorkdirs),
     paths: parseStringArray(def.paths ?? def.workdirs),
     background: typeof def.background === "boolean" ? def.background : undefined,
+    profile: typeof def.profile === "boolean" || typeof def.profile === "string" ? def.profile : undefined,
   }
 }
 
@@ -97,7 +100,7 @@ export function loadConfig(home: string): BxConfig {
     // [apps.name] takes precedence over [name] if both exist.
     const sections: Record<string, Record<string, unknown>> = {}
 
-    const APP_FIELDS = new Set(["mode", "bundle", "binary", "path", "fallback", "args", "passPaths", "passWorkPaths", "passWorkdirs", "paths", "workdirs", "background"])
+    const APP_FIELDS = new Set(["mode", "bundle", "binary", "path", "fallback", "args", "passPaths", "passWorkPaths", "passWorkdirs", "paths", "workdirs", "background", "profile"])
     for (const [key, val] of Object.entries(doc)) {
       if (key === "apps") continue
       if (val && typeof val === "object" && !Array.isArray(val)) {
