@@ -88,7 +88,7 @@ Available fields per app:
 | `fallback` | Absolute fallback path if discovery fails |
 | `args` | Extra arguments always passed to the app |
 | `passPaths` | Paths passed as launch args (`true`/`false`/`N`/`["~/p1", "~/p2"]`) |
-| `paths` | Default working directories when none given on CLI (supports `~/` paths) |
+| `paths` | Default working directories when none given on CLI (supports `~/` paths and `*` globs) |
 | `background` | Run the app detached in the background, output to log file (`true`/`false`) |
 | `profile` | Use an isolated app profile (`true` = default `~/.vscode-sandbox`, `"path"` = custom path) |
 

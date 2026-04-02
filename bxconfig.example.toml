@@ -20,6 +20,7 @@
     "--no-sandbox",
   ]
   # paths = ["~/work/project-a", "~/work/shared-lib"]
+  # paths = ["~/work/*"]  # glob patterns supported — matches all subdirs
 
 [xcode]
   bundle = "com.apple.dt.Xcode"

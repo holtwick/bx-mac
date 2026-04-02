@@ -56,6 +56,7 @@ Configuration:
                          args = ["..."]         extra arguments
                          passPaths = true|false|N|[...]  paths passed as launch args
                          profile = true|"path"  use an isolated app profile
+                         paths = ["~/work/*"]   default workdirs (globs supported)
                          background = true      run in background by default
                        built-in apps (code, xcode) can be overridden
   ~/.bxignore          sandbox rules (one per line):

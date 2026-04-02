@@ -8,6 +8,7 @@ import { parseArgs } from "./args.js"
 import { PROTECTED_DOTDIRS, parseHomeConfig, collectBlockedDirs, collectIgnoredPaths, collectSystemDenyPaths, generateProfile } from "./profile.js"
 import { setupVSCodeProfile, buildCommand, bringAppToFront, getActivationCommand, getNestedSandboxWarning } from "./modes.js"
 import { loadConfig, getAvailableApps, getValidModes } from "./config.js"
+import { expandGlobs } from "./paths.js"
 import { printHelp } from "./help.js"
 import { printDryRunTree } from "./drytree.js"
 import { fmt } from "./fmt.js"
@@ -59,7 +60,8 @@ async function main() {
   // Use preconfigured workdirs from config if none given on CLI
   const app = apps[mode]
   const effectiveWorkArgs = implicit && app?.paths?.length ? app.paths : workArgs
-  const workDirs = effectiveWorkArgs.map((a) => realpathSync(resolve(a.replace(/^~\//, HOME + "/"))))
+  const expanded = expandGlobs(effectiveWorkArgs, HOME)
+  const workDirs = expanded.map((a) => realpathSync(resolve(a)))
 
   if (implicit && !app?.paths?.length) {
     if (workDirs.some((d) => d === HOME)) {

@@ -169,7 +169,7 @@ path = "/usr/local/bin/code"
 | `fallback` | Absolute fallback path if `mdfind` discovery fails |
 | `args` | Extra arguments always passed to the app |
 | `passPaths` | Paths passed as app launch args (`true`/`false`/`N`/`["~/p1", "~/p2"]`) |
-| `paths` | Default working directories when none are given on the CLI (supports `~/` paths) |
+| `paths` | Default working directories when none are given on the CLI (supports `~/` paths and `*` globs) |
 | `background` | Run the app detached in the background by default (`true`/`false`) |
 | `profile` | Use an isolated app profile (`true` = `~/.vscode-sandbox`, `"path"` = custom path) |
 
