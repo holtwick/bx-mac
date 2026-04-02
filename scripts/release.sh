@@ -10,6 +10,9 @@ TAG="v${VERSION}"
 
 echo "Releasing bx ${TAG}..."
 
+# Test
+pnpm test
+
 # Build
 pnpm build
 
@@ -28,7 +31,7 @@ PREV_TAG=$(git tag --sort=-v:refname | sed -n '2p')
 if [ -n "${PREV_TAG}" ]; then
   echo ""
   echo "Changes since ${PREV_TAG}:"
-  git log --oneline "${PREV_TAG}..HEAD"
+  git --no-pager log --oneline "${PREV_TAG}..HEAD"
   echo ""
 fi
 
