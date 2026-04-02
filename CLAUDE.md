@@ -177,6 +177,8 @@ The solution is a **blocklist**: individually deny only the directories that sho
 8. `ro:` directories get a `deny file-write*` rule (read allowed, write blocked)
 9. The generated profile is written to `/tmp` and cleaned up on exit
 
+**Note:** The profile is a snapshot at launch time. Files and directories created after the sandbox starts are not protected. Project-level `.bxignore` patterns only match paths that exist at launch.
+
 ### What is protected
 
 | Path | Access |
