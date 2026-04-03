@@ -2,7 +2,7 @@ import { existsSync, globSync, readFileSync, readdirSync, statSync } from "node:
 import { join, resolve } from "node:path"
 
 export const PROTECTED_DOTDIRS = [
-  // ".Trash",
+  ".Trash",
   ".ssh",
   ".gnupg",
   ".docker",
@@ -10,6 +10,39 @@ export const PROTECTED_DOTDIRS = [
   ".cargo",
   ".gradle",
   ".gem",
+  // Cloud provider credentials
+  ".aws",
+  ".azure",
+  ".azd",
+  ".kube",
+  ".config/gcloud",
+]
+
+export const PROTECTED_HOME_DOTFILES = [
+  ".zsh_history",
+  ".bash_history",
+  ".sh_history",
+  ".node_repl_history",
+  ".python_history",
+  ".netrc",
+  ".git-credentials",
+  ".npmrc",
+  ".pypirc",
+  ".extra",
+]
+
+// Shell init files: readable (tools/shells need them) but not writable (prevent injection)
+export const PROTECTED_HOME_DOTFILES_RO = [
+  ".zshrc",
+  ".zprofile",
+  ".zshenv",
+  ".zlogin",
+  ".zlogout",
+  ".bashrc",
+  ".bash_profile",
+  ".bash_login",
+  ".profile",
+  ".config/fish/config.fish",
 ]
 
 
@@ -234,9 +267,14 @@ function collectProtectedContainers(home: string): string[] {
   return matched
 }
 
+export function collectReadOnlyDotfiles(home: string): string[] {
+  return PROTECTED_HOME_DOTFILES_RO.map((f) => join(home, f))
+}
+
 export function collectIgnoredPaths(home: string, workDirs: string[]): string[] {
   const ignored: string[] = [
     ...PROTECTED_DOTDIRS.map((d) => join(home, d)),
+    ...PROTECTED_HOME_DOTFILES.map((f) => join(home, f)),
     ...PROTECTED_LIBRARY_DIRS.map((d) => join(home, "Library", d)),
     ...new Set(collectProtectedContainers(home)),
   ]
@@ -318,6 +356,7 @@ export function generateProfile(
   ignoredPaths: string[],
   readOnlyDirs: string[] = [],
   home: string = "",
+  readOnlyFiles: string[] = [],
 ): string {
   const blockedRules = sbplDenyBlock(
     "Blocked paths (auto-generated from $HOME contents)",
@@ -337,6 +376,12 @@ export function generateProfile(
     readOnlyDirs.map(sbplSubpath),
   )
 
+  const readOnlyFileRules = sbplDenyBlock(
+    "Read-only home dotfiles (shell init - write-protected against injection)",
+    "file-write*",
+    readOnlyFiles.map(sbplLiteral),
+  )
+
   const systemRules = home
     ? sbplDenyBlock("System-level restrictions", "file*", collectSystemDenyPaths(home).map(sbplSubpath))
     : ""
@@ -346,6 +391,6 @@ export function generateProfile(
 
 (version 1)
 (allow default)
-${blockedRules}${ignoredRules}${readOnlyRules}${systemRules}
+${blockedRules}${ignoredRules}${readOnlyRules}${readOnlyFileRules}${systemRules}
 `
 }

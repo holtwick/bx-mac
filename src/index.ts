@@ -5,7 +5,7 @@ import { createInterface } from "node:readline"
 import process from "node:process"
 import { checkOwnSandbox, checkVSCodeTerminal, checkExternalSandbox, checkWorkDirs, checkAppAlreadyRunning } from "./guards.js"
 import { parseArgs } from "./args.js"
-import { PROTECTED_DOTDIRS, parseHomeConfig, collectBlockedDirs, collectIgnoredPaths, collectSystemDenyPaths, generateProfile } from "./profile.js"
+import { PROTECTED_DOTDIRS, PROTECTED_HOME_DOTFILES, parseHomeConfig, collectBlockedDirs, collectIgnoredPaths, collectReadOnlyDotfiles, collectSystemDenyPaths, generateProfile } from "./profile.js"
 import { setupVSCodeProfile, buildCommand, bringAppToFront, getActivationCommand, getNestedSandboxWarning } from "./modes.js"
 import { loadConfig, getAvailableApps, getValidModes } from "./config.js"
 import { expandGlobs } from "./paths.js"
@@ -104,10 +104,11 @@ async function main() {
   const allAccessible = new Set([...allowed, ...readOnly])
   const blockedDirs = collectBlockedDirs(HOME, HOME, __dirname, allAccessible)
   const ignoredPaths = collectIgnoredPaths(HOME, workDirs)
+  const readOnlyDotfiles = collectReadOnlyDotfiles(HOME)
 
   printPolicySummary(mode, workDirs, blockedDirs, ignoredPaths, readOnly)
 
-  const profile = generateProfile(workDirs, blockedDirs, ignoredPaths, [...readOnly], HOME)
+  const profile = generateProfile(workDirs, blockedDirs, ignoredPaths, [...readOnly], HOME, readOnlyDotfiles)
 
   if (verbose) {
     console.error("\n--- Generated sandbox profile ---")
@@ -237,7 +238,7 @@ function printPolicySummary(
   if (readOnly.size > 0) {
     parts.push(`${readOnly.size} read-only`)
   }
-  const extraIgnored = ignoredPaths.length - PROTECTED_DOTDIRS.length
+  const extraIgnored = ignoredPaths.length - PROTECTED_DOTDIRS.length - PROTECTED_HOME_DOTFILES.length
   if (extraIgnored > 0) {
     parts.push(`${extraIgnored} from .bxignore`)
   }

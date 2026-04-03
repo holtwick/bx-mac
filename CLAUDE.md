@@ -141,7 +141,11 @@ secrets/          # blocks secrets/ directories at any depth
 
 These are always blocked, regardless of configuration:
 
-**Dotdirs:** `.ssh`, `.gnupg`, `.docker`, `.zsh_sessions`, `.cargo`, `.gradle`, `.gem`
+**Dotdirs:** `.Trash`, `.ssh`, `.gnupg`, `.docker`, `.zsh_sessions`, `.cargo`, `.gradle`, `.gem`, `.aws`, `.azure`, `.azd`, `.kube`, `.config/gcloud`
+
+**Dotfiles (fully blocked):** `.zsh_history`, `.bash_history`, `.sh_history`, `.node_repl_history`, `.python_history`, `.netrc`, `.git-credentials`, `.npmrc`, `.pypirc`, `.extra`
+
+**Shell init dotfiles (read-only):** `.zshrc`, `.zprofile`, `.zshenv`, `.zlogin`, `.zlogout`, `.bashrc`, `.bash_profile`, `.bash_login`, `.profile`, `.config/fish/config.fish` - readable but write-protected against injection
 
 **Library (opinionated):** `Accounts`, `Calendars`, `Contacts`, `Cookies`, `Finance`, `Mail`, `Messages`, `Mobile Documents`, `Photos`, `Safari`, and others — plus app containers matching password managers and finance apps (1Password, Bitwarden, MoneyMoney)
 
@@ -164,6 +168,21 @@ Therefore, we **cannot** use a broad deny on a parent directory and then allow a
 A broad `(deny file* (subpath HOME))` also breaks `kqueue`/FSEvents and SQLite `fcntl` locks under `sandbox-exec`, even for paths excluded via `require-not`. This causes VSCode file watchers and `state.vscdb` to fail.
 
 The solution is a **blocklist**: individually deny only the directories that should be protected, leaving everything else at the default `(allow default)`.
+
+### Allow-first vs. deny-first: a deliberate trade-off
+
+Some sandbox tools (e.g. [agent-safehouse](https://github.com/eugene1g/agent-safehouse)) start from `(deny default)` and explicitly allow every path the app needs. This **deny-first / allowlist** model has one advantage: you can deny a parent directory and still allow a specific child, because a specific `allow` wins over the catch-all `deny default`.
+
+bx-mac uses the opposite **allow-first / blocklist** model, for a deliberate reason: developer tools require access to an enormous and ever-changing set of paths (dotfiles, `~/Library`, runtimes, caches). With deny-first, every new tool or framework would require new allow rules - fragile, hard to maintain, and likely to break silently. With allow-first, things work out of the box; only sensitive paths are explicitly denied.
+
+The practical difference for `~/Library`:
+
+| Model | ~/Library | Specific subdir |
+| --- | --- | --- |
+| deny-first | blocked by default | can be selectively opened |
+| allow-first (bx-mac) | open by default | sensitive subdirs individually blocked |
+
+Neither model fully "wins" - deny-first is theoretically stricter but requires significant configuration effort and breaks more easily. bx-mac's blocklist model is the right choice for a tool that needs to work without per-tool tuning.
 
 ### How the profile is generated
 
@@ -199,6 +218,9 @@ The solution is a **blocklist**: individually deny only the directories that sho
 | `~/.*/` (dotfiles/dotdirs) | **full** (except protected ones) |
 | `~/Library` | **full** (except opinionated protected subdirs) |
 | Built-in protected dotdirs | **blocked** |
+| Sensitive home dotfiles (history, credentials) | **blocked** |
+| Cloud credentials (`.aws`, `.azure`, `.kube`, ...) | **blocked** |
+| Shell init dotfiles (`.zshrc`, `.bashrc`, ...) | **read-only** |
 | Protected Library subdirs (Mail, Photos, …) | **blocked** |
 | Password manager / finance app containers | **blocked** |
 | Plain paths in `.bxignore` | **blocked** |

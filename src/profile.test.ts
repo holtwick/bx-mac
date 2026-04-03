@@ -1,14 +1,44 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest"
 import { mkdirSync, rmSync, writeFileSync } from "node:fs"
 import { join } from "node:path"
-import { collectBlockedDirs, collectIgnoredPaths, generateProfile, isSelfProtected, parseHomeConfig, PROTECTED_DOTDIRS, PROTECTED_LIBRARY_DIRS } from "./profile.js"
+import { collectBlockedDirs, collectIgnoredPaths, collectReadOnlyDotfiles, generateProfile, isSelfProtected, parseHomeConfig, PROTECTED_DOTDIRS, PROTECTED_HOME_DOTFILES, PROTECTED_HOME_DOTFILES_RO, PROTECTED_LIBRARY_DIRS } from "./profile.js"
 
 describe("PROTECTED_DOTDIRS", () => {
   it("includes essential sensitive directories", () => {
+    expect(PROTECTED_DOTDIRS).toContain(".Trash")
     expect(PROTECTED_DOTDIRS).toContain(".ssh")
     expect(PROTECTED_DOTDIRS).toContain(".gnupg")
     expect(PROTECTED_DOTDIRS).toContain(".docker")
     expect(PROTECTED_DOTDIRS).toContain(".cargo")
+  })
+
+  it("includes cloud credential directories", () => {
+    expect(PROTECTED_DOTDIRS).toContain(".aws")
+    expect(PROTECTED_DOTDIRS).toContain(".azure")
+    expect(PROTECTED_DOTDIRS).toContain(".azd")
+    expect(PROTECTED_DOTDIRS).toContain(".kube")
+    expect(PROTECTED_DOTDIRS).toContain(".config/gcloud")
+  })
+})
+
+describe("PROTECTED_HOME_DOTFILES_RO", () => {
+  it("includes shell init files", () => {
+    expect(PROTECTED_HOME_DOTFILES_RO).toContain(".zshrc")
+    expect(PROTECTED_HOME_DOTFILES_RO).toContain(".zprofile")
+    expect(PROTECTED_HOME_DOTFILES_RO).toContain(".zshenv")
+    expect(PROTECTED_HOME_DOTFILES_RO).toContain(".bashrc")
+    expect(PROTECTED_HOME_DOTFILES_RO).toContain(".bash_profile")
+    expect(PROTECTED_HOME_DOTFILES_RO).toContain(".profile")
+  })
+})
+
+describe("PROTECTED_HOME_DOTFILES", () => {
+  it("includes sensitive dotfiles", () => {
+    expect(PROTECTED_HOME_DOTFILES).toContain(".zsh_history")
+    expect(PROTECTED_HOME_DOTFILES).toContain(".bash_history")
+    expect(PROTECTED_HOME_DOTFILES).toContain(".netrc")
+    expect(PROTECTED_HOME_DOTFILES).toContain(".git-credentials")
+    expect(PROTECTED_HOME_DOTFILES).toContain(".npmrc")
   })
 })
 
@@ -242,6 +272,21 @@ describe("collectIgnoredPaths", () => {
     expect(ignored).toContain(join(home, "Library", "Mobile Documents"))
   })
 
+  it("includes protected home dotfiles", () => {
+    const ignored = collectIgnoredPaths(home, [workDir])
+    expect(ignored).toContain(join(home, ".zsh_history"))
+    expect(ignored).toContain(join(home, ".netrc"))
+    expect(ignored).toContain(join(home, ".git-credentials"))
+  })
+
+  it("includes cloud credential directories", () => {
+    const ignored = collectIgnoredPaths(home, [workDir])
+    expect(ignored).toContain(join(home, ".aws"))
+    expect(ignored).toContain(join(home, ".azure"))
+    expect(ignored).toContain(join(home, ".kube"))
+    expect(ignored).toContain(join(home, ".config/gcloud"))
+  })
+
   it("matches simple patterns recursively in workdir subdirectories", () => {
     // .env exists at root and in a subdirectory
     writeFileSync(join(workDir, ".env"), "SECRET=1")
@@ -357,6 +402,16 @@ describe("collectIgnoredPaths", () => {
   })
 })
 
+describe("collectReadOnlyDotfiles", () => {
+  it("returns absolute paths for shell init files", () => {
+    const files = collectReadOnlyDotfiles("/Users/test")
+    expect(files).toContain("/Users/test/.zshrc")
+    expect(files).toContain("/Users/test/.bashrc")
+    expect(files).toContain("/Users/test/.profile")
+    expect(files).toContain("/Users/test/.config/fish/config.fish")
+  })
+})
+
 describe("generateProfile", () => {
   it("produces valid SBPL with version and allow default", () => {
     const profile = generateProfile(
@@ -426,5 +481,21 @@ describe("generateProfile", () => {
 
     expect(profile).not.toContain("deny file-write*")
     expect(profile).not.toContain("Read-only")
+  })
+
+  it("includes write-deny rules for read-only dotfiles", () => {
+    const profile = generateProfile(
+      ["/Users/test/work"],
+      [],
+      [],
+      [],
+      "",
+      ["/Users/test/.zshrc", "/Users/test/.bashrc"],
+    )
+
+    expect(profile).toContain('(literal "/Users/test/.zshrc")')
+    expect(profile).toContain('(literal "/Users/test/.bashrc")')
+    expect(profile).toContain("(deny file-write*")
+    expect(profile).toContain("write-protected against injection")
   })
 })
