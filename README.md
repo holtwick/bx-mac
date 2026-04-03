@@ -44,6 +44,7 @@ bx ~/work/my-project ~/work/shared-lib
 - **No protection against root/sudo** — the sandbox applies to the user-level process
 - **macOS only** — relies on `sandbox-exec` (Apple-specific)
 - **Not dynamic** — the sandbox profile is a snapshot of `$HOME` at launch time; directories or files created later are **not** automatically blocked
+- **File names visible** — blocked files cannot be read or written, but their names still appear in directory listings (a kernel-level `readdir` constraint, same as `chmod 000`)
 - **Not a vault** — `sandbox-exec` is undocumented; treat this as a safety net, not a guarantee
 
 ## 📥 Install

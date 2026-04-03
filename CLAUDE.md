@@ -182,6 +182,8 @@ The solution is a **blocklist**: individually deny only the directories that sho
 
 **Key detail:** When descending into ancestor directories, both sibling files and sibling directories are blocked. For example, if the workdir is `~/Documents/work`, then `~/Documents/doc.pdf` is blocked with a `literal` rule and `~/Documents/other-project/` is blocked with a `subpath` rule. This ensures no loose files in parent directories are accessible.
 
+**Known limitation - file names visible in directory listings:** Blocked files have their **contents** denied, but their names still appear in `readdir()` of the parent directory. This is a kernel-level constraint: `readdir` reads the directory entry, not the file itself, and blocking `file-read-data` on the parent would also hide the allowed workdir. This matches the behavior of Unix file permissions (`chmod 000`) and is an accepted tradeoff.
+
 **Note:** The profile is a snapshot at launch time. Files and directories created after the sandbox starts are not protected. Project-level `.bxignore` patterns only match paths that exist at launch.
 
 ### What is protected
