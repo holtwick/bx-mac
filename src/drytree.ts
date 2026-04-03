@@ -98,7 +98,7 @@ export function printDryRunTree({ home, blockedDirs, ignoredPaths, readOnlyDirs,
   const homeParts = home.split("/").filter(Boolean)
 
   for (const dir of blockedDirs) {
-    insertPath(root, homeParts, dir, "blocked", true)
+    insertPath(root, homeParts, dir, "blocked", isDirectory(dir))
   }
   for (const path of ignoredPaths) {
     insertPath(root, homeParts, path, "ignored", isDirectory(path))

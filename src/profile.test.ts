@@ -82,6 +82,31 @@ describe("collectBlockedDirs", () => {
     expect(blocked).toContain(join(home, "Documents"))
   })
 
+  it("blocks files in ancestor directories alongside sibling dirs", () => {
+    // Create a file in the parent of the workdir
+    writeFileSync(join(home, "work", "doc.pdf"), "")
+    writeFileSync(join(home, "work", "notes.txt"), "")
+
+    const workDir = join(home, "work", "project-a")
+    const allowed = new Set([workDir])
+    const blocked = collectBlockedDirs(home, home, "/fake/script", allowed)
+
+    expect(blocked).toContain(join(home, "work", "doc.pdf"))
+    expect(blocked).toContain(join(home, "work", "notes.txt"))
+    expect(blocked).toContain(join(home, "work", "project-b"))
+    expect(blocked).not.toContain(workDir)
+  })
+
+  it("blocks files at home level", () => {
+    writeFileSync(join(home, "secret.txt"), "")
+
+    const workDir = join(home, "work", "project-a")
+    const allowed = new Set([workDir])
+    const blocked = collectBlockedDirs(home, home, "/fake/script", allowed)
+
+    expect(blocked).toContain(join(home, "secret.txt"))
+  })
+
   it("returns only absolute paths", () => {
     const allowed = new Set([join(home, "work", "project-a")])
     const blocked = collectBlockedDirs(home, home, "/fake/script", allowed)
@@ -344,15 +369,17 @@ describe("generateProfile", () => {
     expect(profile).toContain("(allow default)")
   })
 
-  it("includes deny rules for blocked dirs", () => {
+  it("includes deny rules for blocked dirs (subpath for dirs, literal for files)", () => {
     const profile = generateProfile(
       ["/Users/test/work"],
-      ["/Users/test/Documents", "/Users/test/Desktop"],
+      ["/tmp", "/Users/test/Desktop"],
       [],
     )
 
-    expect(profile).toContain('(subpath "/Users/test/Documents")')
-    expect(profile).toContain('(subpath "/Users/test/Desktop")')
+    // /tmp exists and is a directory -> subpath
+    expect(profile).toContain('(subpath "/tmp")')
+    // /Users/test/Desktop does not exist -> literal
+    expect(profile).toContain('(literal "/Users/test/Desktop")')
   })
 
   it("includes deny rules for ignored paths", () => {

@@ -168,14 +168,19 @@ The solution is a **blocklist**: individually deny only the directories that sho
 ### How the profile is generated
 
 1. Parse `~/.bxignore` for `rw:` (read-write) and `ro:` (read-only) entries
-2. Scan `$HOME` for non-dot directories (skip `Library` and the script's own directory)
-3. For each directory: if an allowed or read-only path is inside it, **descend** and block only its siblings — never deny a parent of an accessible path
+2. Scan `$HOME` for non-dot entries (skip `Library` and the script's own directory)
+3. For each entry:
+   - **Files** are always blocked directly (via `literal` deny rule)
+   - **Directories**: if an allowed or read-only path is inside, **descend** and block only siblings (both files and subdirectories) - never deny a parent of an accessible path
+   - Otherwise the directory is blocked entirely (via `subpath` deny rule)
 4. Dotfiles (`~/.*/`) and `~/Library` are generally accessible (VSCode, Node, shell, and other tools depend on them)
-5. Opinionated protection for specific `~/Library` subdirs (Mail, Messages, Photos, Safari, …) and app containers of password managers / finance apps
+5. Opinionated protection for specific `~/Library` subdirs (Mail, Messages, Photos, Safari, ...) and app containers of password managers / finance apps
 6. Built-in protected dotdirs are always denied
 7. Plain lines in `~/.bxignore` and `<workdir>/.bxignore` add further deny rules
 8. `ro:` directories get a `deny file-write*` rule (read allowed, write blocked)
 9. The generated profile is written to `/tmp` and cleaned up on exit
+
+**Key detail:** When descending into ancestor directories, both sibling files and sibling directories are blocked. For example, if the workdir is `~/Documents/work`, then `~/Documents/doc.pdf` is blocked with a `literal` rule and `~/Documents/other-project/` is blocked with a `subpath` rule. This ensures no loose files in parent directories are accessible.
 
 **Note:** The profile is a snapshot at launch time. Files and directories created after the sandbox starts are not protected. Project-level `.bxignore` patterns only match paths that exist at launch.
 
@@ -184,6 +189,7 @@ The solution is a **blocklist**: individually deny only the directories that sho
 | Path | Access |
 | --- | --- |
 | `~/Documents`, `~/Desktop`, `~/Downloads`, ... | **blocked** |
+| Files in parent directories of working dir | **blocked** |
 | Other projects (siblings of working dir) | **blocked** |
 | Working directory | **full** |
 | `rw:` dirs in `~/.bxignore` | **full** |

@@ -196,9 +196,15 @@ export function collectBlockedDirs(
     } catch {
       continue
     }
-    if (!isDir) continue
+
     if (parentDir === home && name === "Library") continue
     if (scriptDir.startsWith(fullPath + "/") || scriptDir === fullPath) continue
+
+    // Files cannot be ancestors — block them directly
+    if (!isDir) {
+      blocked.push(fullPath)
+      continue
+    }
 
     const status = isAllowedOrAncestor(fullPath, allowedDirs)
     if (status === "allowed") continue
@@ -309,9 +315,9 @@ export function generateProfile(
   home: string = "",
 ): string {
   const blockedRules = sbplDenyBlock(
-    "Blocked directories (auto-generated from $HOME contents)",
+    "Blocked paths (auto-generated from $HOME contents)",
     "file*",
-    blockedDirs.map(sbplSubpath),
+    blockedDirs.map(sbplPathRule),
   )
 
   const ignoredRules = sbplDenyBlock(
