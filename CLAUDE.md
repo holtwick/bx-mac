@@ -141,9 +141,11 @@ secrets/          # blocks secrets/ directories at any depth
 
 These are always blocked, regardless of configuration:
 
-**Dotdirs:** `.Trash`, `.ssh`, `.gnupg`, `.docker`, `.zsh_sessions`, `.cargo`, `.gradle`, `.gem`
+**Dotdirs:** `.Trash`, `.ssh`, `.gnupg`, `.docker`, `.zsh_sessions`, `.cargo`, `.gradle`, `.gem`, `.aws`, `.azure`, `.azd`, `.kube`, `.config/gcloud`
 
-**Dotfiles:** `.zsh_history`, `.bash_history`, `.sh_history`, `.node_repl_history`, `.python_history`, `.netrc`, `.git-credentials`, `.npmrc`, `.pypirc`, `.extra`
+**Dotfiles (fully blocked):** `.zsh_history`, `.bash_history`, `.sh_history`, `.node_repl_history`, `.python_history`, `.netrc`, `.git-credentials`, `.npmrc`, `.pypirc`, `.extra`
+
+**Shell init dotfiles (read-only):** `.zshrc`, `.zprofile`, `.zshenv`, `.zlogin`, `.zlogout`, `.bashrc`, `.bash_profile`, `.bash_login`, `.profile`, `.config/fish/config.fish` - readable but write-protected against injection
 
 **Library (opinionated):** `Accounts`, `Calendars`, `Contacts`, `Cookies`, `Finance`, `Mail`, `Messages`, `Mobile Documents`, `Photos`, `Safari`, and others — plus app containers matching password managers and finance apps (1Password, Bitwarden, MoneyMoney)
 
@@ -202,6 +204,8 @@ The solution is a **blocklist**: individually deny only the directories that sho
 | `~/Library` | **full** (except opinionated protected subdirs) |
 | Built-in protected dotdirs | **blocked** |
 | Sensitive home dotfiles (history, credentials) | **blocked** |
+| Cloud credentials (`.aws`, `.azure`, `.kube`, ...) | **blocked** |
+| Shell init dotfiles (`.zshrc`, `.bashrc`, ...) | **read-only** |
 | Protected Library subdirs (Mail, Photos, …) | **blocked** |
 | Password manager / finance app containers | **blocked** |
 | Plain paths in `.bxignore` | **blocked** |
