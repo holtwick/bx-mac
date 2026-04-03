@@ -380,7 +380,7 @@ These are great when available, but they only protect within their own tool. bx 
 
 ## 🔗 Alternatives
 
-- [Agent Safehouse](https://agent-safehouse.dev/) — macOS kernel-level sandboxing for LLM coding agents via `sandbox-exec`. Deny-first model that blocks write access outside the project directory.
+- [Agent Safehouse](https://agent-safehouse.dev/) — macOS kernel-level sandboxing for LLM coding agents via `sandbox-exec`. Uses a **deny-first model**: everything is blocked by default and only explicitly listed paths are opened up. This gives you theoretically stricter control (e.g. `~/Library` is fully blocked and only specific subdirs are allowed), but requires more configuration — tools and runtimes that need paths you haven't whitelisted will break silently. If you need that level of precision and are willing to tune profiles per tool, Agent Safehouse may be the better fit. bx uses the opposite **allow-first model** (only sensitive paths are blocked), which works out of the box for VSCode, shells, Claude Code, and other tools without any per-tool configuration.
 - **Docker / VMs** — for stronger isolation, run AI tools in a virtualized environment (containers, VMs). Full process and network isolation at the cost of setup overhead.
 - **Web sandboxes** — browser-based approaches for running AI agents. See Simon Willison's [Living dangerously with Claude](https://simonwillison.net/2025/Oct/22/living-dangerously-with-claude/) for an overview.
 
