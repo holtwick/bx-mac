@@ -2,7 +2,7 @@ import { existsSync, globSync, readFileSync, readdirSync, statSync } from "node:
 import { join, resolve } from "node:path"
 
 export const PROTECTED_DOTDIRS = [
-  // ".Trash",
+  ".Trash",
   ".ssh",
   ".gnupg",
   ".docker",
@@ -10,6 +10,20 @@ export const PROTECTED_DOTDIRS = [
   ".cargo",
   ".gradle",
   ".gem",
+]
+
+export const PROTECTED_HOME_DOTFILES = [
+  ".zsh_history",
+  ".zsh_sessions",
+  ".bash_history",
+  ".sh_history",
+  ".node_repl_history",
+  ".python_history",
+  ".netrc",
+  ".git-credentials",
+  ".npmrc",
+  ".pypirc",
+  ".extra",
 ]
 
 
@@ -237,6 +251,7 @@ function collectProtectedContainers(home: string): string[] {
 export function collectIgnoredPaths(home: string, workDirs: string[]): string[] {
   const ignored: string[] = [
     ...PROTECTED_DOTDIRS.map((d) => join(home, d)),
+    ...PROTECTED_HOME_DOTFILES.map((f) => join(home, f)),
     ...PROTECTED_LIBRARY_DIRS.map((d) => join(home, "Library", d)),
     ...new Set(collectProtectedContainers(home)),
   ]

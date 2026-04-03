@@ -1,14 +1,25 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest"
 import { mkdirSync, rmSync, writeFileSync } from "node:fs"
 import { join } from "node:path"
-import { collectBlockedDirs, collectIgnoredPaths, generateProfile, isSelfProtected, parseHomeConfig, PROTECTED_DOTDIRS, PROTECTED_LIBRARY_DIRS } from "./profile.js"
+import { collectBlockedDirs, collectIgnoredPaths, generateProfile, isSelfProtected, parseHomeConfig, PROTECTED_DOTDIRS, PROTECTED_HOME_DOTFILES, PROTECTED_LIBRARY_DIRS } from "./profile.js"
 
 describe("PROTECTED_DOTDIRS", () => {
   it("includes essential sensitive directories", () => {
+    expect(PROTECTED_DOTDIRS).toContain(".Trash")
     expect(PROTECTED_DOTDIRS).toContain(".ssh")
     expect(PROTECTED_DOTDIRS).toContain(".gnupg")
     expect(PROTECTED_DOTDIRS).toContain(".docker")
     expect(PROTECTED_DOTDIRS).toContain(".cargo")
+  })
+})
+
+describe("PROTECTED_HOME_DOTFILES", () => {
+  it("includes sensitive dotfiles", () => {
+    expect(PROTECTED_HOME_DOTFILES).toContain(".zsh_history")
+    expect(PROTECTED_HOME_DOTFILES).toContain(".bash_history")
+    expect(PROTECTED_HOME_DOTFILES).toContain(".netrc")
+    expect(PROTECTED_HOME_DOTFILES).toContain(".git-credentials")
+    expect(PROTECTED_HOME_DOTFILES).toContain(".npmrc")
   })
 })
 
@@ -240,6 +251,13 @@ describe("collectIgnoredPaths", () => {
     expect(ignored).toContain(join(home, "Library", "Mail"))
     expect(ignored).toContain(join(home, "Library", "Safari"))
     expect(ignored).toContain(join(home, "Library", "Mobile Documents"))
+  })
+
+  it("includes protected home dotfiles", () => {
+    const ignored = collectIgnoredPaths(home, [workDir])
+    expect(ignored).toContain(join(home, ".zsh_history"))
+    expect(ignored).toContain(join(home, ".netrc"))
+    expect(ignored).toContain(join(home, ".git-credentials"))
   })
 
   it("matches simple patterns recursively in workdir subdirectories", () => {
