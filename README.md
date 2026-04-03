@@ -5,7 +5,7 @@
 [![license](https://img.shields.io/github/license/holtwick/bx-mac)](https://github.com/holtwick/bx-mac/blob/master/LICENSE)
 [![macOS](https://img.shields.io/badge/platform-macOS-lightgrey)](https://github.com/holtwick/bx-mac)
 
-> **Put your AI in a box.** Launch VSCode, Claude Code, a terminal, or any command in a macOS sandbox — your tools can only see the project you're working on.
+> **Put your AI in a box.** Launch VSCode, Claude Code, a terminal, or any command in a macOS sandbox — your tools can only see the project you're working on. Not a vault, but a reasonable safety net.
 
 ## 🤔 Why?
 
@@ -45,7 +45,23 @@ bx ~/work/my-project ~/work/shared-lib
 - **macOS only** — relies on `sandbox-exec` (Apple-specific)
 - **Not dynamic** — the sandbox profile is a snapshot of `$HOME` at launch time; directories or files created later are **not** automatically blocked
 - **File names visible** — blocked files cannot be read or written, but their names still appear in directory listings (a kernel-level `readdir` constraint, same as `chmod 000`)
-- **Not a vault** — `sandbox-exec` is undocumented; treat this as a safety net, not a guarantee
+- **Not a vault** — this is a safety net, not airtight isolation (see [Security model](#-security-model-allow-first))
+
+## 🧱 Security model: allow-first
+
+bx uses an **allow-first / blocklist** approach: everything is accessible by default, and only sensitive paths are explicitly blocked. This is the opposite of a deny-first / allowlist model where everything is blocked and only specific paths are opened up.
+
+**Why allow-first?** Developer tools require access to an enormous and ever-changing set of paths -- dotfiles, `~/Library`, runtimes, caches, toolchains. A deny-first model would require new allow rules for every tool or framework update, breaking silently when a path is missing. The allow-first model works out of the box without per-tool tuning.
+
+**What this means in practice:**
+
+- bx provides **reasonable protection** against accidental or misguided file access -- not airtight isolation
+- Sensitive paths (credentials, personal data, other projects) are explicitly blocked
+- Paths that are not on the blocklist remain accessible -- including parts of `~/Library` and most dotfiles
+- The sandbox profile is a **snapshot at launch time** -- files created later are not protected
+- `sandbox-exec` itself is undocumented Apple API that could change with OS updates
+
+If you need stricter, deny-first isolation, consider [Agent Safehouse](https://agent-safehouse.dev/) or a Docker/VM-based approach (see [Alternatives](#-alternatives)). bx is designed for the common case: keep AI tools and editors functional while blocking access to things they should never touch.
 
 ## 📥 Install
 
