@@ -55,8 +55,7 @@ function isDirectory(path: string): boolean {
   try {
     return statSync(path).isDirectory()
   } catch {
-    // Dotfiles without stat access are assumed to be directories
-    return path.slice(path.lastIndexOf("/") + 1).startsWith(".")
+    return true
   }
 }
 

@@ -56,6 +56,9 @@ function parsePassPaths(val: unknown): boolean | number | string[] | undefined {
   if (typeof val === "number" && Number.isInteger(val) && val > 0) return val
   if (Array.isArray(val)) {
     const paths = val.filter((a): a is string => typeof a === "string")
+    if (val.length !== paths.length) {
+      console.error(fmt.warn("non-string items in array config were ignored"))
+    }
     if (paths.length > 0) return paths
     return false
   }
@@ -65,6 +68,9 @@ function parsePassPaths(val: unknown): boolean | number | string[] | undefined {
 function parseStringArray(val: unknown): string[] | undefined {
   if (Array.isArray(val)) {
     const items = val.filter((a): a is string => typeof a === "string")
+    if (val.length !== items.length) {
+      console.error(fmt.warn("non-string items in array config were ignored"))
+    }
     if (items.length > 0) return items
   }
   return undefined

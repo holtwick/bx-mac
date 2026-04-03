@@ -63,6 +63,11 @@ async function main() {
   const expanded = expandGlobs(effectiveWorkArgs, HOME)
   const workDirs = expanded.map((a) => realpathSync(resolve(a)))
 
+  if (workDirs.length === 0) {
+    console.error(`\n${fmt.error("no matching working directories found")}\n`)
+    process.exit(1)
+  }
+
   if (implicit && !app?.paths?.length) {
     if (workDirs.some((d) => d === HOME)) {
       console.error(`\n${fmt.error("no working directory specified and current directory is $HOME")}\n`)

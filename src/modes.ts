@@ -101,8 +101,14 @@ export function buildCommand(
 
 function buildBuiltinCommand(mode: BuiltinMode, appArgs: string[]): Command {
   switch (mode) {
-    case "term":
-      return { bin: process.env.SHELL ?? "/bin/zsh", args: ["-l"] }
+    case "term": {
+      const shell = process.env.SHELL ?? "/bin/zsh"
+      if (!existsSync(shell)) {
+        console.error(fmt.warn(`shell not found: ${shell}, falling back to /bin/zsh`))
+        return { bin: "/bin/zsh", args: ["-l"] }
+      }
+      return { bin: shell, args: ["-l"] }
+    }
     case "claude":
       return { bin: "claude", args: [] }
     case "exec":

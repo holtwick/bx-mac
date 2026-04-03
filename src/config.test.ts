@@ -124,6 +124,26 @@ passPaths = ["~/work/a", "~/work/b"]
     expect(config.apps.myapp.passPaths).toEqual(["~/work/a", "~/work/b"])
   })
 
+  it("parses empty array passPaths as false", () => {
+    setConfig(`
+[myapp]
+path = "/test/app"
+passPaths = []
+`)
+    const config = loadConfig("/Users/test")
+    expect(config.apps.myapp.passPaths).toBe(false)
+  })
+
+  it("parses passPaths = 0 as undefined", () => {
+    setConfig(`
+[myapp]
+path = "/test/app"
+passPaths = 0
+`)
+    const config = loadConfig("/Users/test")
+    expect(config.apps.myapp.passPaths).toBeUndefined()
+  })
+
   it("reads legacy passWorkdirs as fallback", () => {
     setConfig(`
 [myapp]

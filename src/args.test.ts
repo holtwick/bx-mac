@@ -116,6 +116,22 @@ describe("parseArgs", () => {
     expect(result.vscodeUser).toBe(true)
   })
 
+  it("parses --vscode-user=path equals syntax", () => {
+    argv("--vscode-user=/custom/profile", "code", "/tmp")
+    const result = parseArgs(ALL_MODES)
+    expect(result.vscodeUser).toBe("/custom/profile")
+    expect(result.mode).toBe("code")
+    expect(result.workArgs).toEqual(["/tmp"])
+  })
+
+  it("parses --vscode-user=~/path equals syntax", () => {
+    argv("--vscode-user=~/my-profile", "code", "/tmp")
+    const result = parseArgs(ALL_MODES)
+    expect(result.vscodeUser).toBe("~/my-profile")
+    expect(result.mode).toBe("code")
+    expect(result.workArgs).toEqual(["/tmp"])
+  })
+
   it("exec mode without -- aborts", () => {
     argv("exec", "/tmp/project")
     vi.spyOn(process, "exit").mockImplementation((code?: any) => {
