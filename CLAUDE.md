@@ -169,6 +169,21 @@ A broad `(deny file* (subpath HOME))` also breaks `kqueue`/FSEvents and SQLite `
 
 The solution is a **blocklist**: individually deny only the directories that should be protected, leaving everything else at the default `(allow default)`.
 
+### Allow-first vs. deny-first: a deliberate trade-off
+
+Some sandbox tools (e.g. [agent-safehouse](https://github.com/eugene1g/agent-safehouse)) start from `(deny default)` and explicitly allow every path the app needs. This **deny-first / allowlist** model has one advantage: you can deny a parent directory and still allow a specific child, because a specific `allow` wins over the catch-all `deny default`.
+
+bx-mac uses the opposite **allow-first / blocklist** model, for a deliberate reason: developer tools require access to an enormous and ever-changing set of paths (dotfiles, `~/Library`, runtimes, caches). With deny-first, every new tool or framework would require new allow rules - fragile, hard to maintain, and likely to break silently. With allow-first, things work out of the box; only sensitive paths are explicitly denied.
+
+The practical difference for `~/Library`:
+
+| Model | ~/Library | Specific subdir |
+| --- | --- | --- |
+| deny-first | blocked by default | can be selectively opened |
+| allow-first (bx-mac) | open by default | sensitive subdirs individually blocked |
+
+Neither model fully "wins" - deny-first is theoretically stricter but requires significant configuration effort and breaks more easily. bx-mac's blocklist model is the right choice for a tool that needs to work without per-tool tuning.
+
 ### How the profile is generated
 
 1. Parse `~/.bxignore` for `rw:` (read-write) and `ro:` (read-only) entries
