@@ -260,7 +260,12 @@ export function collectIgnoredPaths(home: string, workDirs: string[]): string[] 
 // --- SBPL profile generation ---
 
 function sbplEscape(path: string): string {
-  return path.replace(/\\/g, "\\\\").replace(/"/g, '\\"')
+  return path
+    .replace(/\\/g, "\\\\")
+    .replace(/"/g, '\\"')
+    .replace(/\n/g, "\\n")
+    .replace(/\r/g, "\\r")
+    .replace(/\t/g, "\\t")
 }
 
 function sbplSubpath(path: string): string {

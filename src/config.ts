@@ -57,6 +57,7 @@ function parsePassPaths(val: unknown): boolean | number | string[] | undefined {
   if (Array.isArray(val)) {
     const paths = val.filter((a): a is string => typeof a === "string")
     if (paths.length > 0) return paths
+    return false
   }
   return undefined
 }

@@ -24,7 +24,7 @@ function kindIcon(kind: EntryKind): string {
   }
 }
 
-function insertPath(root: TreeNode, homeParts: string[], absPath: string, kind: EntryKind, isDir: boolean) {
+function insertPath(root: TreeNode, absPath: string, kind: EntryKind, isDir: boolean) {
   const parts = absPath.split("/").filter(Boolean)
   let node = root
   for (const part of parts) {
@@ -42,8 +42,6 @@ function insertPath(root: TreeNode, homeParts: string[], absPath: string, kind: 
  *  Intermediate directories on the home path are kept as navigation context. */
 function pruneTree(node: TreeNode, currentParts: string[], homeParts: string[], depth: number): boolean {
   if (node.kind) return true
-
-  const isOnHomePath = depth < homeParts.length && currentParts[depth] === homeParts[depth]
 
   for (const [name, child] of [...node.children]) {
     const keep = pruneTree(child, [...currentParts, name], homeParts, depth + 1)
@@ -98,19 +96,19 @@ export function printDryRunTree({ home, blockedDirs, ignoredPaths, readOnlyDirs,
   const homeParts = home.split("/").filter(Boolean)
 
   for (const dir of blockedDirs) {
-    insertPath(root, homeParts, dir, "blocked", isDirectory(dir))
+    insertPath(root, dir, "blocked", isDirectory(dir))
   }
   for (const path of ignoredPaths) {
-    insertPath(root, homeParts, path, "ignored", isDirectory(path))
+    insertPath(root, path, "ignored", isDirectory(path))
   }
   for (const dir of readOnlyDirs) {
-    insertPath(root, homeParts, dir, "read-only", true)
+    insertPath(root, dir, "read-only", true)
   }
   for (const dir of workDirs) {
-    insertPath(root, homeParts, dir, "workdir", true)
+    insertPath(root, dir, "workdir", true)
   }
   for (const dir of systemDenyPaths) {
-    insertPath(root, homeParts, dir, "blocked", true)
+    insertPath(root, dir, "blocked", true)
   }
 
   pruneTree(root, [], homeParts, 0)

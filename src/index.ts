@@ -1,4 +1,4 @@
-import { writeFileSync, rmSync, openSync, mkdtempSync, realpathSync } from "node:fs"
+import { writeFileSync, rmSync, openSync, closeSync, mkdtempSync, realpathSync } from "node:fs"
 import { dirname, join, resolve } from "node:path"
 import { spawn, execSync } from "node:child_process"
 import { createInterface } from "node:readline"
@@ -159,7 +159,13 @@ async function main() {
       env: { ...process.env, CODEBOX_SANDBOX: "1" },
     })
 
+    child.on("error", (err) => {
+      console.error(fmt.error(`failed to start sandbox: ${err.message}`))
+      process.exit(1)
+    })
+
     child.unref()
+    closeSync(logFd)
     bringAppToFront(mode, apps)
 
     console.error(fmt.info(`running in background (pid ${child.pid})`))
@@ -180,10 +186,15 @@ async function main() {
     env: { ...process.env, CODEBOX_SANDBOX: "1" },
   })
 
-  bringAppToFront(mode, apps)
-
   const cleanup = () => { try { rmSync(tmpDir, { recursive: true, force: true }) } catch { } }
   process.on("exit", cleanup)
+
+  child.on("error", (err) => {
+    console.error(fmt.error(`failed to start sandbox: ${err.message}`))
+    process.exit(1)
+  })
+
+  bringAppToFront(mode, apps)
 
   child.on("close", (code: number | null) => {
     process.exit(code ?? 0)
