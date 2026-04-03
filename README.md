@@ -381,6 +381,8 @@ These are great when available, but they only protect within their own tool. bx 
 ## 🔗 Alternatives
 
 - [Agent Safehouse](https://agent-safehouse.dev/) — macOS kernel-level sandboxing for LLM coding agents via `sandbox-exec`. Deny-first model that blocks write access outside the project directory.
+- **Docker / VMs** — for stronger isolation, run AI tools in a virtualized environment (containers, VMs). Full process and network isolation at the cost of setup overhead.
+- **Web sandboxes** — browser-based approaches for running AI agents. See Simon Willison's [Living dangerously with Claude](https://simonwillison.net/2025/Oct/22/living-dangerously-with-claude/) for an overview.
 
 ## 💛 Sponsor
 
