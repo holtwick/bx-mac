@@ -103,8 +103,8 @@ async function main() {
   const { allowed, readOnly } = parseHomeConfig(HOME, workDirs)
   const allAccessible = new Set([...allowed, ...readOnly])
   const blockedDirs = collectBlockedDirs(HOME, HOME, __dirname, allAccessible)
-  const ignoredPaths = collectIgnoredPaths(HOME, workDirs)
-  const readOnlyDotfiles = collectReadOnlyDotfiles(HOME)
+  const ignoredPaths = collectIgnoredPaths(HOME, workDirs, allAccessible)
+  const readOnlyDotfiles = collectReadOnlyDotfiles(HOME, allAccessible)
 
   printPolicySummary(mode, workDirs, blockedDirs, ignoredPaths, readOnly)
 

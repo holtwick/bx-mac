@@ -243,6 +243,8 @@ ro:reference/docs
 ro:shared/toolchain
 ```
 
+`rw:` and `ro:` entries also **override** the built-in protected lists - e.g. `ro:.npmrc` makes the otherwise-blocked `~/.npmrc` readable, `rw:.aws` opens the AWS credentials directory. Files (not just directories) are accepted as targets. Use this with care - you are explicitly weakening the default protection.
+
 Deny rules are applied **in addition** to the built-in protected lists:
 
 > 🔒 **Dotdirs:** `.ssh` `.gnupg` `.docker` `.zsh_sessions` `.cargo` `.gradle` `.gem`

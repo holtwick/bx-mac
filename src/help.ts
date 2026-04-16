@@ -61,8 +61,8 @@ Configuration:
                        built-in apps (code, xcode) can be overridden
   ~/.bxignore          sandbox rules (one per line):
                          path         block access (deny)
-                         rw:path      allow read-write access
-                         ro:path      allow read-only access
+                         rw:path      allow read-write access (overrides built-in protection)
+                         ro:path      allow read-only access (overrides built-in protection)
   <workdir>/.bxignore  blocked paths in project (.gitignore-style matching)
                          / or .         self-protect: block entire directory
   <dir>/.bxprotect     marker file: block the containing directory

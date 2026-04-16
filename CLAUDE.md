@@ -111,7 +111,13 @@ rw:shared/libs
 # Allow read-only access (can read but not modify)
 ro:reference/docs
 ro:shared/toolchain
+
+# Override built-in protections (files allowed, not just dirs)
+ro:.npmrc          # makes hardcoded-blocked .npmrc readable
+rw:.aws            # opens hardcoded-blocked .aws fully
 ```
+
+`rw:` / `ro:` entries override built-in protected lists (`PROTECTED_DOTDIRS`, `PROTECTED_HOME_DOTFILES`, `PROTECTED_LIBRARY_DIRS`, container patterns, plain `~/.bxignore` deny lines, `PROTECTED_HOME_DOTFILES_RO`). The user can fully disable any default protection - intended escape hatch.
 
 **`<dir>/.bxprotect`** — Marker file (can be empty). When present in a directory, that directory is completely blocked. If placed in a workdir, `bx` refuses to launch. Useful for protecting sensitive project directories without editing `~/.bxignore`.
 
@@ -194,9 +200,9 @@ Neither model fully "wins" - deny-first is theoretically stricter but requires s
    - Otherwise the directory is blocked entirely (via `subpath` deny rule)
 4. Dotfiles (`~/.*/`) and `~/Library` are generally accessible (VSCode, Node, shell, and other tools depend on them)
 5. Opinionated protection for specific `~/Library` subdirs (Mail, Messages, Photos, Safari, ...) and app containers of password managers / finance apps
-6. Built-in protected dotdirs are always denied
-7. Plain lines in `~/.bxignore` and `<workdir>/.bxignore` add further deny rules
-8. `ro:` directories get a `deny file-write*` rule (read allowed, write blocked)
+6. Built-in protected dotdirs are denied unless overridden via `rw:` / `ro:` in `~/.bxignore`
+7. Plain lines in `~/.bxignore` and `<workdir>/.bxignore` add further deny rules (also overridable)
+8. `ro:` paths (files or directories) get a `deny file-write*` rule (read allowed, write blocked)
 9. The generated profile is written to `/tmp` and cleaned up on exit
 
 **Key detail:** When descending into ancestor directories, both sibling files and sibling directories are blocked. For example, if the workdir is `~/Documents/work`, then `~/Documents/doc.pdf` is blocked with a `literal` rule and `~/Documents/other-project/` is blocked with a `subpath` rule. This ensures no loose files in parent directories are accessible.

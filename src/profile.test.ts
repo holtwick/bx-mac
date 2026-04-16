@@ -193,6 +193,13 @@ describe("parseHomeConfig", () => {
     expect(readOnly.size).toBe(0)
   })
 
+  it("accepts files (not just directories) as RO/RW targets", () => {
+    writeFileSync(join(home, ".npmrc"), "registry=...")
+    writeFileSync(join(home, ".bxignore"), "ro:.npmrc\n")
+    const { readOnly } = parseHomeConfig(home, [join(home, "work/project-a")])
+    expect(readOnly).toContain(join(home, ".npmrc"))
+  })
+
   it("always includes workDirs in allowed", () => {
     writeFileSync(join(home, ".bxignore"), "")
     const workDir = join(home, "work/project-a")
@@ -410,6 +417,56 @@ describe("collectReadOnlyDotfiles", () => {
     expect(files).toContain("/Users/test/.profile")
     expect(files).toContain("/Users/test/.config/fish/config.fish")
   })
+
+  it("filters out paths overridden via ~/.bxignore", () => {
+    const overrides = new Set(["/Users/test/.zshrc"])
+    const files = collectReadOnlyDotfiles("/Users/test", overrides)
+    expect(files).not.toContain("/Users/test/.zshrc")
+    expect(files).toContain("/Users/test/.bashrc")
+  })
+})
+
+describe("collectIgnoredPaths overrides", () => {
+  const tmpBase = join("/tmp", `bx-test-overrides-${process.pid}`)
+  const home = join(tmpBase, "home")
+  const workDir = join(home, "work", "project")
+
+  beforeEach(() => {
+    mkdirSync(workDir, { recursive: true })
+  })
+
+  afterEach(() => {
+    rmSync(tmpBase, { recursive: true, force: true })
+  })
+
+  it("removes hardcoded dotfiles when overridden", () => {
+    const overrides = new Set([join(home, ".npmrc")])
+    const ignored = collectIgnoredPaths(home, [workDir], overrides)
+    expect(ignored).not.toContain(join(home, ".npmrc"))
+    expect(ignored).toContain(join(home, ".netrc"))
+  })
+
+  it("removes hardcoded dotdirs when overridden", () => {
+    const overrides = new Set([join(home, ".aws")])
+    const ignored = collectIgnoredPaths(home, [workDir], overrides)
+    expect(ignored).not.toContain(join(home, ".aws"))
+    expect(ignored).toContain(join(home, ".kube"))
+  })
+
+  it("removes Library subdirs when overridden", () => {
+    const overrides = new Set([join(home, "Library", "Mail")])
+    const ignored = collectIgnoredPaths(home, [workDir], overrides)
+    expect(ignored).not.toContain(join(home, "Library", "Mail"))
+    expect(ignored).toContain(join(home, "Library", "Safari"))
+  })
+
+  it("removes plain ~/.bxignore deny lines when overridden", () => {
+    mkdirSync(join(home, "secret"), { recursive: true })
+    writeFileSync(join(home, ".bxignore"), "secret\n")
+    const overrides = new Set([join(home, "secret")])
+    const ignored = collectIgnoredPaths(home, [workDir], overrides)
+    expect(ignored).not.toContain(join(home, "secret"))
+  })
 })
 
 describe("generateProfile", () => {
@@ -467,8 +524,8 @@ describe("generateProfile", () => {
     )
 
     expect(profile).toContain("(deny file-write*")
-    expect(profile).toContain('(subpath "/Users/test/shared/libs")')
-    expect(profile).toContain("; Read-only directories")
+    expect(profile).toContain('"/Users/test/shared/libs"')
+    expect(profile).toContain("; Read-only paths")
   })
 
   it("omits read-only section when no RO dirs", () => {

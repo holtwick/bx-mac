@@ -187,7 +187,7 @@ export function parseHomeConfig(home: string, workDirs: string[]): HomeConfig {
 
     const [, prefix, rawPath] = match
     const absolute = resolve(home, rawPath.trim())
-    if (!existsSync(absolute) || !statSync(absolute).isDirectory()) continue
+    if (!existsSync(absolute)) continue
 
     if (prefix.toUpperCase() === "RW") {
       allowed.add(absolute)
@@ -267,24 +267,29 @@ function collectProtectedContainers(home: string): string[] {
   return matched
 }
 
-export function collectReadOnlyDotfiles(home: string): string[] {
-  return PROTECTED_HOME_DOTFILES_RO.map((f) => join(home, f))
+export function collectReadOnlyDotfiles(home: string, overrides: Set<string> = new Set()): string[] {
+  return PROTECTED_HOME_DOTFILES_RO
+    .map((f) => join(home, f))
+    .filter((p) => !overrides.has(p))
 }
 
-export function collectIgnoredPaths(home: string, workDirs: string[]): string[] {
-  const ignored: string[] = [
+export function collectIgnoredPaths(home: string, workDirs: string[], overrides: Set<string> = new Set()): string[] {
+  const hardcoded = [
     ...PROTECTED_DOTDIRS.map((d) => join(home, d)),
     ...PROTECTED_HOME_DOTFILES.map((f) => join(home, f)),
     ...PROTECTED_LIBRARY_DIRS.map((d) => join(home, "Library", d)),
     ...new Set(collectProtectedContainers(home)),
   ]
+  const ignored: string[] = hardcoded.filter((p) => !overrides.has(p))
 
   // Global ~/.bxignore — only plain deny lines (skip RW:/RO: prefixed)
   const globalIgnore = join(home, ".bxignore")
   if (existsSync(globalIgnore)) {
     const denyLines = parseLines(globalIgnore).filter((l) => !ACCESS_PREFIX_RE.test(l))
     for (const line of denyLines) {
-      ignored.push(...resolveGlobMatches(line, home))
+      for (const m of resolveGlobMatches(line, home)) {
+        if (!overrides.has(m)) ignored.push(m)
+      }
     }
   }
 
@@ -371,9 +376,9 @@ export function generateProfile(
   )
 
   const readOnlyRules = sbplDenyBlock(
-    "Read-only directories",
+    "Read-only paths",
     "file-write*",
-    readOnlyDirs.map(sbplSubpath),
+    readOnlyDirs.map(sbplPathRule),
   )
 
   const readOnlyFileRules = sbplDenyBlock(
