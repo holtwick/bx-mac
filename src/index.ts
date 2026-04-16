@@ -5,7 +5,7 @@ import { createInterface } from "node:readline"
 import process from "node:process"
 import { checkOwnSandbox, checkVSCodeTerminal, checkExternalSandbox, checkWorkDirs, checkAppAlreadyRunning } from "./guards.js"
 import { parseArgs } from "./args.js"
-import { PROTECTED_DOTDIRS, PROTECTED_HOME_DOTFILES, parseHomeConfig, collectBlockedDirs, collectIgnoredPaths, collectReadOnlyDotfiles, collectSystemDenyPaths, generateProfile } from "./profile.js"
+import { PROTECTED_DOTDIRS, PROTECTED_HOME_DOTFILES, PROTECTED_LIBRARY_DIRS, parseHomeConfig, collectBlockedDirs, collectIgnoredPaths, collectReadOnlyDotfiles, collectSystemDenyPaths, generateProfile } from "./profile.js"
 import { setupVSCodeProfile, buildCommand, bringAppToFront, getActivationCommand, getNestedSandboxWarning } from "./modes.js"
 import { loadConfig, getAvailableApps, getValidModes } from "./config.js"
 import { expandGlobs } from "./paths.js"
@@ -102,8 +102,9 @@ async function main() {
 
   const { allowed, readOnly } = parseHomeConfig(HOME, workDirs)
   const allAccessible = new Set([...allowed, ...readOnly])
+  warnDangerousOverrides(HOME, allAccessible)
   const blockedDirs = collectBlockedDirs(HOME, HOME, __dirname, allAccessible)
-  const ignoredPaths = collectIgnoredPaths(HOME, workDirs, allAccessible)
+  const ignoredPaths = collectIgnoredPaths(HOME, workDirs, allAccessible, readOnly)
   const readOnlyDotfiles = collectReadOnlyDotfiles(HOME, allAccessible)
 
   printPolicySummary(mode, workDirs, blockedDirs, ignoredPaths, readOnly)
@@ -243,6 +244,18 @@ function printPolicySummary(
     parts.push(`${extraIgnored} from .bxignore`)
   }
   console.error(fmt.detail(parts.join(" · ")))
+}
+
+function warnDangerousOverrides(home: string, accessible: Set<string>) {
+  const sensitive = [
+    ...PROTECTED_DOTDIRS.map((d) => join(home, d)),
+    ...PROTECTED_HOME_DOTFILES.map((f) => join(home, f)),
+    ...PROTECTED_LIBRARY_DIRS.map((d) => join(home, "Library", d)),
+  ]
+  const hits = sensitive.filter((p) => accessible.has(p))
+  for (const p of hits) {
+    console.error(fmt.detail(`warning: ~/.bxignore override exposes built-in protected path ${p}`))
+  }
 }
 
 function printLaunchDetails(

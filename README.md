@@ -234,22 +234,26 @@ Unified sandbox rules for your home directory. Paths relative to `$HOME`. Each l
 .kube
 .config/gcloud
 
-# Allow read-write access to extra directories
+# Allow read-write access to extra paths
 rw:work/bin
 rw:shared/libs
+rw:~/projects/*       # globs supported, ~ is expanded
 
 # Allow read-only access (can read but not modify)
 ro:reference/docs
 ro:shared/toolchain
+ro:.npmrc             # files work too; overrides built-in block
 ```
 
-`rw:` and `ro:` entries also **override** the built-in protected lists - e.g. `ro:.npmrc` makes the otherwise-blocked `~/.npmrc` readable, `rw:.aws` opens the AWS credentials directory. Files (not just directories) are accepted as targets. Use this with care - you are explicitly weakening the default protection.
+Deny rules are applied **in addition** to the built-in protected lists. `rw:` and `ro:` entries however **override** them - `ro:.npmrc` exposes the otherwise-blocked `~/.npmrc` read-only, `rw:.aws` opens the AWS credentials directory completely. Files (not just directories) are accepted, `~/...` is expanded, and globs (`*`, `**`) are matched against `$HOME`. Use override entries deliberately - you are weakening the default protection. `bx` prints a warning on stderr when an override exposes a built-in protected path.
 
-Deny rules are applied **in addition** to the built-in protected lists:
+Built-in protected lists:
 
 > 🔒 **Dotdirs:** `.ssh` `.gnupg` `.docker` `.zsh_sessions` `.cargo` `.gradle` `.gem`
 >
 > 🏛️ **Library (opinionated):** `Accounts` `Calendars` `Contacts` `Cookies` `Finance` `Mail` `Messages` `Mobile Documents` `Photos` `Safari` and [others (see full list)](src/profile.ts) — plus containers of password managers & finance apps
+
+**Limitation:** Overrides only work on whole protected paths. `rw:.aws/profile.json` does not selectively unblock a file inside `~/.aws` - the parent deny still wins (Apple SBPL: deny beats allow). Use `rw:.aws` to open the entire directory.
 
 ### `<project>/.bxignore`
 
@@ -283,6 +287,13 @@ my-project/deploy/.bxignore         # deployment credentials
 ```
 
 Each `.bxignore` resolves its patterns relative to its own directory.
+
+Project `.bxignore` also accepts `ro:` entries to make paths within the workdir read-only (write-protect generated files, vendored libraries, etc.). `rw:` is silently ignored here - the workdir is already read-write by default.
+
+```gitignore
+ro:vendor/
+ro:generated/schema.ts
+```
 
 ### Self-protecting directories
 

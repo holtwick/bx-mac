@@ -117,7 +117,7 @@ ro:.npmrc          # makes hardcoded-blocked .npmrc readable
 rw:.aws            # opens hardcoded-blocked .aws fully
 ```
 
-`rw:` / `ro:` entries override built-in protected lists (`PROTECTED_DOTDIRS`, `PROTECTED_HOME_DOTFILES`, `PROTECTED_LIBRARY_DIRS`, container patterns, plain `~/.bxignore` deny lines, `PROTECTED_HOME_DOTFILES_RO`). The user can fully disable any default protection - intended escape hatch.
+`rw:` / `ro:` entries override built-in protected lists (`PROTECTED_DOTDIRS`, `PROTECTED_HOME_DOTFILES`, `PROTECTED_LIBRARY_DIRS`, container patterns, plain `~/.bxignore` deny lines, `PROTECTED_HOME_DOTFILES_RO`). The user can fully disable any default protection - intended escape hatch. `~`-prefixed paths (`ro:~/.npmrc`) and globs (`rw:work/project-*`) are accepted. Overrides only match whole protected paths - sub-path overrides inside hardcoded blocks (e.g. `rw:.aws/profile.json`) do not work due to SBPL `deny > allow`. Exposing a built-in protected path triggers a stderr warning at launch.
 
 **`<dir>/.bxprotect`** — Marker file (can be empty). When present in a directory, that directory is completely blocked. If placed in a workdir, `bx` refuses to launch. Useful for protecting sensitive project directories without editing `~/.bxignore`.
 
@@ -141,6 +141,10 @@ secrets/          # blocks secrets/ directories at any depth
 # Self-protect: a bare "/" or "." blocks the entire containing directory
 /                 # makes this directory (and all contents) inaccessible
 .                 # same effect — shorthand alternative
+
+# ro: makes paths within the workdir read-only (rw: is silently ignored - workdir is RW by default)
+ro:vendor/
+ro:generated/schema.ts
 ```
 
 ### Built-in protected dotdirs

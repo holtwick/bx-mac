@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest"
-import { mkdirSync, rmSync, writeFileSync } from "node:fs"
+import { mkdirSync, realpathSync, rmSync, writeFileSync } from "node:fs"
 import { join } from "node:path"
 import { collectBlockedDirs, collectIgnoredPaths, collectReadOnlyDotfiles, generateProfile, isSelfProtected, parseHomeConfig, PROTECTED_DOTDIRS, PROTECTED_HOME_DOTFILES, PROTECTED_HOME_DOTFILES_RO, PROTECTED_LIBRARY_DIRS } from "./profile.js"
 
@@ -149,10 +149,11 @@ describe("collectBlockedDirs", () => {
 
 describe("parseHomeConfig", () => {
   const tmpBase = join("/tmp", `bx-test-config-${process.pid}`)
-  const home = join(tmpBase, "home")
+  let home: string
 
   beforeEach(() => {
-    mkdirSync(join(home, "work", "project-a"), { recursive: true })
+    mkdirSync(join(tmpBase, "home", "work", "project-a"), { recursive: true })
+    home = realpathSync(join(tmpBase, "home"))
     mkdirSync(join(home, "shared", "libs"), { recursive: true })
     mkdirSync(join(home, "reference", "docs"), { recursive: true })
   })
@@ -198,6 +199,29 @@ describe("parseHomeConfig", () => {
     writeFileSync(join(home, ".bxignore"), "ro:.npmrc\n")
     const { readOnly } = parseHomeConfig(home, [join(home, "work/project-a")])
     expect(readOnly).toContain(join(home, ".npmrc"))
+  })
+
+  it("expands ~ to $HOME in RW/RO entries", () => {
+    writeFileSync(join(home, ".npmrc"), "registry=...")
+    writeFileSync(join(home, ".bxignore"), "ro:~/.npmrc\n")
+    const { readOnly } = parseHomeConfig(home, [join(home, "work/project-a")])
+    expect(readOnly).toContain(join(home, ".npmrc"))
+  })
+
+  it("expands globs in RW/RO entries", () => {
+    mkdirSync(join(home, "work", "project-b"), { recursive: true })
+    mkdirSync(join(home, "work", "project-c"), { recursive: true })
+    writeFileSync(join(home, ".bxignore"), "ro:work/project-*\n")
+    const { readOnly } = parseHomeConfig(home, [])
+    expect(readOnly).toContain(join(home, "work", "project-a"))
+    expect(readOnly).toContain(join(home, "work", "project-b"))
+    expect(readOnly).toContain(join(home, "work", "project-c"))
+  })
+
+  it("ignores RO entries pointing at non-existent paths", () => {
+    writeFileSync(join(home, ".bxignore"), "ro:does-not-exist\n")
+    const { readOnly } = parseHomeConfig(home, [])
+    expect(readOnly.size).toBe(0)
   })
 
   it("always includes workDirs in allowed", () => {
@@ -428,11 +452,13 @@ describe("collectReadOnlyDotfiles", () => {
 
 describe("collectIgnoredPaths overrides", () => {
   const tmpBase = join("/tmp", `bx-test-overrides-${process.pid}`)
-  const home = join(tmpBase, "home")
-  const workDir = join(home, "work", "project")
+  let home: string
+  let workDir: string
 
   beforeEach(() => {
-    mkdirSync(workDir, { recursive: true })
+    mkdirSync(join(tmpBase, "home", "work", "project"), { recursive: true })
+    home = realpathSync(join(tmpBase, "home"))
+    workDir = join(home, "work", "project")
   })
 
   afterEach(() => {
@@ -458,6 +484,34 @@ describe("collectIgnoredPaths overrides", () => {
     const ignored = collectIgnoredPaths(home, [workDir], overrides)
     expect(ignored).not.toContain(join(home, "Library", "Mail"))
     expect(ignored).toContain(join(home, "Library", "Safari"))
+  })
+
+  it("workdir .bxignore ro: entries populate readOnly set", () => {
+    mkdirSync(join(workDir, "vendor"), { recursive: true })
+    writeFileSync(join(workDir, ".bxignore"), "ro:vendor\n")
+    const readOnly = new Set<string>()
+    collectIgnoredPaths(home, [workDir], new Set(), readOnly)
+    expect(readOnly).toContain(join(workDir, "vendor"))
+  })
+
+  it("workdir .bxignore rw: entries are ignored (workdir is allowed by default)", () => {
+    mkdirSync(join(workDir, "tools"), { recursive: true })
+    writeFileSync(join(workDir, ".bxignore"), "rw:tools\n")
+    const ignored = collectIgnoredPaths(home, [workDir])
+    expect(ignored).not.toContain(join(workDir, "tools"))
+  })
+
+  it("end-to-end: ro: file override produces file-write* deny, no full deny", () => {
+    writeFileSync(join(home, ".npmrc"), "registry=...")
+    writeFileSync(join(home, ".bxignore"), "ro:.npmrc\n")
+    const { allowed, readOnly } = parseHomeConfig(home, [workDir])
+    const allAccessible = new Set([...allowed, ...readOnly])
+    const ignored = collectIgnoredPaths(home, [workDir], allAccessible, readOnly)
+    const profile = generateProfile([workDir], [], ignored, [...readOnly], home, [])
+    expect(profile).toContain(`(deny file-write*\n  (literal "${join(home, ".npmrc")}")`)
+    // The same path must NOT appear in a (deny file* ...) block
+    const denyAllBlock = profile.match(/\(deny file\*\n([^)]*)\)/)?.[1] ?? ""
+    expect(denyAllBlock).not.toContain(`"${join(home, ".npmrc")}"`)
   })
 
   it("removes plain ~/.bxignore deny lines when overridden", () => {

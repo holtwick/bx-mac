@@ -1,4 +1,4 @@
-import { existsSync, globSync, readFileSync, readdirSync, statSync } from "node:fs"
+import { existsSync, globSync, readFileSync, readdirSync, realpathSync, statSync } from "node:fs"
 import { join, resolve } from "node:path"
 
 export const PROTECTED_DOTDIRS = [
@@ -130,14 +130,25 @@ export function isSelfProtected(dir: string): boolean {
 
 // --- Ignore file collection ---
 
-function applyIgnoreFile(filePath: string, baseDir: string, ignored: string[]) {
+function applyIgnoreFile(filePath: string, baseDir: string, ignored: string[], readOnly?: Set<string>) {
   for (const line of parseLines(filePath)) {
     if (line === "/" || line === ".") continue // handled by isSelfProtected
+    const accessMatch = line.match(ACCESS_PREFIX_RE)
+    if (accessMatch) {
+      // Workdir-level ro: adds read-only override; rw: is redundant (workdir is allowed by default)
+      if (!readOnly) continue
+      const [, prefix, rawPath] = accessMatch
+      if (prefix.toUpperCase() !== "RO") continue
+      for (const m of resolveGlobMatches(rawPath.trim(), baseDir)) {
+        readOnly.add(realpathSafe(m))
+      }
+      continue
+    }
     ignored.push(...resolveGlobMatches(line, baseDir))
   }
 }
 
-function collectIgnoreFilesRecursive(dir: string, ignored: string[]) {
+function collectIgnoreFilesRecursive(dir: string, ignored: string[], readOnly?: Set<string>) {
   if (isSelfProtected(dir)) {
     ignored.push(dir)
     return
@@ -145,7 +156,7 @@ function collectIgnoreFilesRecursive(dir: string, ignored: string[]) {
 
   const ignoreFile = join(dir, ".bxignore")
   if (existsSync(ignoreFile)) {
-    applyIgnoreFile(ignoreFile, dir, ignored)
+    applyIgnoreFile(ignoreFile, dir, ignored, readOnly)
   }
 
   let entries: string[]
@@ -160,7 +171,7 @@ function collectIgnoreFilesRecursive(dir: string, ignored: string[]) {
     const fullPath = join(dir, name)
     try {
       if (statSync(fullPath).isDirectory()) {
-        collectIgnoreFilesRecursive(fullPath, ignored)
+        collectIgnoreFilesRecursive(fullPath, ignored, readOnly)
       }
     } catch {
       // Permission denied or similar — skip
@@ -177,6 +188,28 @@ export interface HomeConfig {
 
 const ACCESS_PREFIX_RE = /^(RW|RO):(.+)$/i
 
+function expandHomePath(home: string, raw: string): string {
+  const trimmed = raw.trim()
+  if (trimmed === "~") return home
+  if (trimmed.startsWith("~/")) return join(home, trimmed.slice(2))
+  return resolve(home, trimmed)
+}
+
+function realpathSafe(p: string): string {
+  try { return realpathSync(p) } catch { return p }
+}
+
+function resolveAccessTargets(home: string, raw: string): string[] {
+  const expanded = expandHomePath(home, raw)
+  // If the literal path exists, use it directly (skip glob to keep "[" / "*" in real names usable)
+  if (existsSync(expanded)) return [realpathSafe(expanded)]
+  // Otherwise treat as glob relative to $HOME
+  const matches = globSync(raw.trim().replace(/^~\//, ""), { cwd: home })
+  return matches
+    .map((m) => realpathSafe(join(home, m)))
+    .filter((p) => existsSync(p))
+}
+
 export function parseHomeConfig(home: string, workDirs: string[]): HomeConfig {
   const allowed = new Set(workDirs)
   const readOnly = new Set<string>()
@@ -186,14 +219,11 @@ export function parseHomeConfig(home: string, workDirs: string[]): HomeConfig {
     if (!match) continue
 
     const [, prefix, rawPath] = match
-    const absolute = resolve(home, rawPath.trim())
-    if (!existsSync(absolute)) continue
+    const targets = resolveAccessTargets(home, rawPath)
+    if (targets.length === 0) continue
 
-    if (prefix.toUpperCase() === "RW") {
-      allowed.add(absolute)
-    } else {
-      readOnly.add(absolute)
-    }
+    const target = prefix.toUpperCase() === "RW" ? allowed : readOnly
+    for (const t of targets) target.add(t)
   }
 
   return { allowed, readOnly }
@@ -267,20 +297,24 @@ function collectProtectedContainers(home: string): string[] {
   return matched
 }
 
+function isOverridden(path: string, overrides: Set<string>): boolean {
+  return overrides.has(path) || overrides.has(realpathSafe(path))
+}
+
 export function collectReadOnlyDotfiles(home: string, overrides: Set<string> = new Set()): string[] {
   return PROTECTED_HOME_DOTFILES_RO
     .map((f) => join(home, f))
-    .filter((p) => !overrides.has(p))
+    .filter((p) => !isOverridden(p, overrides))
 }
 
-export function collectIgnoredPaths(home: string, workDirs: string[], overrides: Set<string> = new Set()): string[] {
+export function collectIgnoredPaths(home: string, workDirs: string[], overrides: Set<string> = new Set(), readOnly?: Set<string>): string[] {
   const hardcoded = [
     ...PROTECTED_DOTDIRS.map((d) => join(home, d)),
     ...PROTECTED_HOME_DOTFILES.map((f) => join(home, f)),
     ...PROTECTED_LIBRARY_DIRS.map((d) => join(home, "Library", d)),
     ...new Set(collectProtectedContainers(home)),
   ]
-  const ignored: string[] = hardcoded.filter((p) => !overrides.has(p))
+  const ignored: string[] = hardcoded.filter((p) => !isOverridden(p, overrides))
 
   // Global ~/.bxignore — only plain deny lines (skip RW:/RO: prefixed)
   const globalIgnore = join(home, ".bxignore")
@@ -288,13 +322,13 @@ export function collectIgnoredPaths(home: string, workDirs: string[], overrides:
     const denyLines = parseLines(globalIgnore).filter((l) => !ACCESS_PREFIX_RE.test(l))
     for (const line of denyLines) {
       for (const m of resolveGlobMatches(line, home)) {
-        if (!overrides.has(m)) ignored.push(m)
+        if (!isOverridden(m, overrides)) ignored.push(m)
       }
     }
   }
 
   for (const workDir of workDirs) {
-    collectIgnoreFilesRecursive(workDir, ignored)
+    collectIgnoreFilesRecursive(workDir, ignored, readOnly)
   }
 
   return ignored
