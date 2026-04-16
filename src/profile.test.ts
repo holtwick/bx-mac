@@ -521,6 +521,26 @@ describe("collectIgnoredPaths overrides", () => {
     const ignored = collectIgnoredPaths(home, [workDir], overrides)
     expect(ignored).not.toContain(join(home, "secret"))
   })
+
+  it("plain ~/.bxignore patterns apply recursively inside workdirs", () => {
+    mkdirSync(join(workDir, "secrets"), { recursive: true })
+    mkdirSync(join(workDir, "sub", "secrets"), { recursive: true })
+    writeFileSync(join(workDir, "key.pem"), "x")
+    writeFileSync(join(home, ".bxignore"), "secrets/\n*.pem\n")
+    const ignored = collectIgnoredPaths(home, [workDir])
+    expect(ignored).toContain(join(workDir, "secrets"))
+    expect(ignored).toContain(join(workDir, "sub", "secrets"))
+    expect(ignored).toContain(join(workDir, "key.pem"))
+  })
+
+  it("plain ~/.bxignore patterns match at $HOME top level only (not recursive)", () => {
+    mkdirSync(join(home, "secrets"), { recursive: true })
+    mkdirSync(join(home, "nested", "secrets"), { recursive: true })
+    writeFileSync(join(home, ".bxignore"), "secrets/\n")
+    const ignored = collectIgnoredPaths(home, [workDir])
+    expect(ignored).toContain(join(home, "secrets"))
+    expect(ignored).not.toContain(join(home, "nested", "secrets"))
+  })
 })
 
 describe("generateProfile", () => {

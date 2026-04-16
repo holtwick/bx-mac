@@ -245,6 +245,11 @@ ro:shared/toolchain
 ro:.npmrc             # files work too; overrides built-in block
 ```
 
+Plain deny rules have two scopes:
+
+- **At `$HOME` top level only** (no recursive `**` walk). `secrets/` matches `~/secrets`, not `~/nested/secrets`; `.config/gcloud` matches as a literal.
+- **Recursively inside each workdir** - same semantics as a project-level `.bxignore`, so `secrets/` and `*.pem` apply across every project you open. The recursive scan skips `node_modules`, `.git`, caches, `DerivedData`, `Pods`, and similar subtrees for speed.
+
 Deny rules are applied **in addition** to the built-in protected lists. `rw:` and `ro:` entries however **override** them - `ro:.npmrc` exposes the otherwise-blocked `~/.npmrc` read-only, `rw:.aws` opens the AWS credentials directory completely. Files (not just directories) are accepted, `~/...` is expanded, and globs (`*`, `**`) are matched against `$HOME`. Use override entries deliberately - you are weakening the default protection. `bx` prints a warning on stderr when an override exposes a built-in protected path.
 
 Built-in protected lists:

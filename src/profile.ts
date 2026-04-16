@@ -115,6 +115,61 @@ function resolveGlobMatches(pattern: string, baseDir: string): string[] {
     .map((match) => resolve(baseDir, match))
 }
 
+// Directories that are expensive to traverse and never contain user-managed
+// deny targets (caches, VCS internals, large dep trees, separately-handled areas).
+// Used to prune recursive globSync walks of $HOME.
+const SCAN_EXCLUDE_NAMES = new Set([
+  "Library",
+  "Applications",
+  "node_modules",
+  ".git",
+  ".Trash",
+  ".cache",
+  ".npm",
+  ".pnpm-store",
+  ".yarn",
+  ".cargo",
+  ".rustup",
+  ".gradle",
+  ".gem",
+  ".m2",
+  ".nvm",
+  ".bun",
+  ".deno",
+  "DerivedData",
+  "Pods",
+])
+
+function scanExcludeFilter(entry: unknown): boolean {
+  const name = typeof entry === "string"
+    ? entry.split("/").pop() ?? ""
+    : (entry as { name?: string } | null)?.name ?? ""
+  return SCAN_EXCLUDE_NAMES.has(name)
+}
+
+function resolveGlobMatchesBatch(patterns: string[], baseDir: string): string[] {
+  if (patterns.length === 0) return []
+  const globs = patterns.map(toGlobPattern)
+  return globSync(globs, { cwd: baseDir, exclude: scanExcludeFilter })
+    .map((match) => resolve(baseDir, match))
+}
+
+/**
+ * Resolve patterns against `baseDir` at top level only (no recursive `**`
+ * expansion).  Trailing slashes are stripped; leading slashes are stripped
+ * (already anchored).  Used for `~/.bxignore` in $HOME to keep the lookup
+ * cheap while still matching literal/glob paths at the home root.
+ */
+function resolveTopLevelMatches(patterns: string[], baseDir: string): string[] {
+  if (patterns.length === 0) return []
+  const cleaned = patterns
+    .map((p) => (p.startsWith("/") ? p.slice(1) : p))
+    .map((p) => (p.endsWith("/") ? p.slice(0, -1) : p))
+    .filter((p) => p.length > 0)
+  if (cleaned.length === 0) return []
+  return globSync(cleaned, { cwd: baseDir }).map((m) => resolve(baseDir, m))
+}
+
 // --- Self-protection detection ---
 
 /**
@@ -316,18 +371,23 @@ export function collectIgnoredPaths(home: string, workDirs: string[], overrides:
   ]
   const ignored: string[] = hardcoded.filter((p) => !isOverridden(p, overrides))
 
-  // Global ~/.bxignore — only plain deny lines (skip RW:/RO: prefixed)
+  // Global ~/.bxignore plain deny lines (skip RW:/RO:).
+  //   - In $HOME: matched top-level only (no recursive `**` walk).
+  //   - In workdirs: matched recursively (like a project-level .bxignore),
+  //     so patterns such as `secrets/` or `*.pem` apply across every project.
   const globalIgnore = join(home, ".bxignore")
-  if (existsSync(globalIgnore)) {
-    const denyLines = parseLines(globalIgnore).filter((l) => !ACCESS_PREFIX_RE.test(l))
-    for (const line of denyLines) {
-      for (const m of resolveGlobMatches(line, home)) {
-        if (!isOverridden(m, overrides)) ignored.push(m)
-      }
-    }
+  const globalDenyLines = existsSync(globalIgnore)
+    ? parseLines(globalIgnore).filter((l) => !ACCESS_PREFIX_RE.test(l))
+    : []
+
+  for (const m of resolveTopLevelMatches(globalDenyLines, home)) {
+    if (!isOverridden(m, overrides)) ignored.push(m)
   }
 
   for (const workDir of workDirs) {
+    for (const m of resolveGlobMatchesBatch(globalDenyLines, workDir)) {
+      if (!isOverridden(m, overrides)) ignored.push(m)
+    }
     collectIgnoreFilesRecursive(workDir, ignored, readOnly)
   }
 

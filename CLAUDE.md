@@ -117,6 +117,11 @@ ro:.npmrc          # makes hardcoded-blocked .npmrc readable
 rw:.aws            # opens hardcoded-blocked .aws fully
 ```
 
+Plain deny patterns in `~/.bxignore` (e.g. `secrets/`, `*.pem`) are resolved in two scopes:
+
+- **At `$HOME` top level only** - no recursive `**` walk. A pattern like `secrets/` matches `~/secrets` but not `~/nested/secrets`. `.config/gcloud` matches as a literal sub-path. This keeps launch cheap and matches the intent of home-level rules (hardcoded dotdirs like `.aws` are already covered by the built-in protected lists).
+- **Recursively inside each workdir** - same semantics as a project-level `.bxignore`. `secrets/` blocks every `secrets/` directory in the project tree, `*.pem` every `.pem` file. The recursive globSync uses an exclude filter (`SCAN_EXCLUDE_NAMES` in `profile.ts`) that prunes `node_modules`, `.git`, `.Trash`, caches, `DerivedData`, `Pods`, etc. - patterns will not match inside those subtrees.
+
 `rw:` / `ro:` entries override built-in protected lists (`PROTECTED_DOTDIRS`, `PROTECTED_HOME_DOTFILES`, `PROTECTED_LIBRARY_DIRS`, container patterns, plain `~/.bxignore` deny lines, `PROTECTED_HOME_DOTFILES_RO`). The user can fully disable any default protection - intended escape hatch. `~`-prefixed paths (`ro:~/.npmrc`) and globs (`rw:work/project-*`) are accepted. Overrides only match whole protected paths - sub-path overrides inside hardcoded blocks (e.g. `rw:.aws/profile.json`) do not work due to SBPL `deny > allow`. Exposing a built-in protected path triggers a stderr warning at launch.
 
 **`<dir>/.bxprotect`** — Marker file (can be empty). When present in a directory, that directory is completely blocked. If placed in a workdir, `bx` refuses to launch. Useful for protecting sensitive project directories without editing `~/.bxignore`.
