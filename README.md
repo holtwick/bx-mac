@@ -394,6 +394,22 @@ ls ~/work/other-project/         # ❌ Operation not permitted
 cat ./src/index.ts               # ✅ Works!
 ```
 
+**Drag and drop from `~/Downloads` (or other blocked dirs)** — if dragging files from Finder into a sandboxed app fails silently, the source folder is blocked. Grant read-only access by adding it to `~/.bxignore`:
+
+```gitignore
+ro:Downloads
+```
+
+The app can then read (and copy) the dragged file, but not modify the original. Same trick works for `ro:Desktop`, `ro:Documents`, etc.
+
+**`npm install` fails with auth or registry errors** — `.npmrc` is blocked by default (may contain tokens). If your install needs the registry config but not write access, expose it read-only:
+
+```gitignore
+ro:.npmrc
+```
+
+Same pattern applies to other tools whose config dotfiles are on the protected list (`.pypirc`, ...).
+
 ## ⚠️ Known limitations
 
 - **⚠️ Sandbox profile is static:** The sandbox rules are generated **once at launch** by scanning the current state of `$HOME`. Directories or files created **after** the sandbox starts are **not protected** — for example, if a tool creates `~/new-project/` while the sandbox is running, that directory will be fully accessible. Similarly, project-level `.bxignore` patterns only match files that exist at launch time; files matching a blocked pattern (e.g. `.env`) that are created later will **not** be denied. Re-run `bx` to pick up changes.
