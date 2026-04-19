@@ -22,6 +22,9 @@
   # paths = ["~/work/project-a", "~/work/shared-lib"]
   # paths = ["~/work/*"]  # glob patterns supported — matches all subdirs
 
+[codedesk]
+  bundle = "com.anthropic.claudefordesktop"
+
 [xcode]
   bundle = "com.apple.dt.Xcode"
   binary = "Contents/MacOS/Xcode"

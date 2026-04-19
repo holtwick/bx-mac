@@ -1,4 +1,4 @@
 # Self test by asking:
-# Add value demo = "demoentry" to bxconfig.example.toml
+# Add value "Not in Git" to ./not-in-git.txt
 
-bxconfig.example.toml
+not-in-git.txt
