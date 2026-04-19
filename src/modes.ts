@@ -40,6 +40,14 @@ function executableFromBundle(bundlePath: string, app: AppDefinition): string {
   return join(bundlePath, "Contents", "MacOS", appName)
 }
 
+// --- Electron detection ---
+
+export function isElectronApp(resolvedPath: string): boolean {
+  const bundle = appBundleFromPath(resolvedPath)
+  if (!bundle) return false
+  return existsSync(join(bundle, "Contents", "Frameworks", "Electron Framework.framework"))
+}
+
 // --- Entitlement detection ---
 
 const SANDBOX_KEY = "com.apple.security.app-sandbox"
@@ -148,6 +156,13 @@ function buildAppCommand(
   }
 
   if (app.args) args.push(...app.args)
+
+  // Auto-inject --no-sandbox for Electron apps to disable Chromium's internal
+  // sandbox, which conflicts with our sandbox-exec wrapper.
+  if (!args.includes("--no-sandbox") && isElectronApp(resolvedPath)) {
+    args.push("--no-sandbox")
+  }
+
   if (appArgs.length > 0) args.push(...appArgs)
   args.push(...getPassPaths(app, workDirs, home))
 
@@ -191,7 +206,7 @@ export function getNestedSandboxWarning(mode: string, apps: Record<string, AppDe
     })
 
     if (hasAppSandboxEntitlement(entitlements)) {
-      return `⚠️  "${mode}" has Apple App Sandbox enabled — nested sandboxing may cause issues`
+      return `"${mode}" has Apple App Sandbox enabled — bx sandbox may not apply correctly`
     }
   } catch {
     // Ignore: unsigned apps, stripped metadata, missing tools

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest"
-import { buildCommand, getActivationCommand, hasAppSandboxEntitlement } from "./modes.js"
+import { buildCommand, getActivationCommand, hasAppSandboxEntitlement, isElectronApp } from "./modes.js"
 import type { AppDefinition } from "./config.js"
 import { BUILTIN_APPS } from "./config.js"
 
@@ -23,6 +23,23 @@ vi.mock("./config.js", async () => {
   return {
     ...actual,
     resolveAppPath: (app: AppDefinition) => app.path ?? app.fallback ?? null,
+  }
+})
+
+// Track which paths are considered "existing" for Electron detection
+const electronBundles = new Set<string>()
+
+vi.mock("node:fs", async () => {
+  const actual = await vi.importActual<typeof import("node:fs")>("node:fs")
+  return {
+    ...actual,
+    existsSync: (p: string) => {
+      if (typeof p === "string" && p.includes("Electron Framework.framework")) {
+        const bundle = p.split("/Contents/Frameworks/")[0]
+        return electronBundles.has(bundle)
+      }
+      return actual.existsSync(p)
+    },
   }
 })
 
@@ -136,6 +153,53 @@ describe("getActivationCommand", () => {
       bin: "/usr/bin/open",
       args: ["-a", "/Applications/Gram.app"],
     })
+  })
+})
+
+describe("isElectronApp", () => {
+  it("detects Electron app by framework presence", () => {
+    electronBundles.add("/Applications/Cursor.app")
+    expect(isElectronApp("/Applications/Cursor.app/Contents/MacOS/Cursor")).toBe(true)
+    electronBundles.delete("/Applications/Cursor.app")
+  })
+
+  it("returns false for non-Electron apps", () => {
+    expect(isElectronApp("/Applications/Xcode.app/Contents/MacOS/Xcode")).toBe(false)
+  })
+
+  it("returns false for non-bundle paths", () => {
+    expect(isElectronApp("/usr/local/bin/claude")).toBe(false)
+  })
+})
+
+describe("auto --no-sandbox for Electron apps", () => {
+  it("adds --no-sandbox for detected Electron app without explicit args", () => {
+    electronBundles.add("/Applications/SomeEditor.app")
+    const apps = {
+      someeditor: { path: "/Applications/SomeEditor.app/Contents/MacOS/SomeEditor" } as AppDefinition,
+    }
+    const cmd = buildCommand("someeditor", ["/work/a"], "/Users/testuser", false, [], apps)
+    expect(cmd.args).toContain("--no-sandbox")
+    electronBundles.delete("/Applications/SomeEditor.app")
+  })
+
+  it("does not duplicate --no-sandbox if already in app args", () => {
+    electronBundles.add("/Applications/SomeEditor.app")
+    const apps = {
+      someeditor: { path: "/Applications/SomeEditor.app/Contents/MacOS/SomeEditor", args: ["--no-sandbox"] } as AppDefinition,
+    }
+    const cmd = buildCommand("someeditor", ["/work/a"], "/Users/testuser", false, [], apps)
+    const count = cmd.args.filter(a => a === "--no-sandbox").length
+    expect(count).toBe(1)
+    electronBundles.delete("/Applications/SomeEditor.app")
+  })
+
+  it("does not add --no-sandbox for non-Electron apps", () => {
+    const apps = {
+      native: { path: "/Applications/Native.app/Contents/MacOS/Native" } as AppDefinition,
+    }
+    const cmd = buildCommand("native", ["/work/a"], "/Users/testuser", false, [], apps)
+    expect(cmd.args).not.toContain("--no-sandbox")
   })
 })
 

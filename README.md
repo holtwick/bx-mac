@@ -166,7 +166,6 @@ App definitions in TOML format. Each `[<name>]` section becomes a CLI mode — u
 [cursor]
 bundle = "com.todesktop.230313mzl4w4u92"
 binary = "Contents/MacOS/Cursor"
-args = ["--no-sandbox"]
 
 # Add Zed (explicit path, no discovery)
 [zed]
@@ -176,6 +175,8 @@ path = "/Applications/Zed.app/Contents/MacOS/zed"
 [code]
 path = "/usr/local/bin/code"
 ```
+
+**Electron apps:** bx automatically detects Electron-based apps (by checking for `Electron Framework.framework` inside the `.app` bundle) and adds `--no-sandbox` to disable Chromium's internal sandbox, which conflicts with `sandbox-exec`. No manual `args = ["--no-sandbox"]` needed.
 
 | Field | Description |
 | --- | --- |
@@ -361,7 +362,8 @@ bx detects and prevents problematic scenarios:
 - **🔄 Sandbox nesting:** If `CODEBOX_SANDBOX=1` is set (auto-propagated), bx refuses to start — nested sandboxes cause silent failures.
 - **🔍 Unknown sandbox:** On startup, bx probes `~/Documents`, `~/Desktop`, `~/Downloads`. If any return `EPERM`, another sandbox is active — bx aborts.
 - **⚠️ VSCode terminal:** If `VSCODE_PID` is set, bx warns that it will launch a *new* instance, not sandbox the current one.
-- **🧩 App already sandboxed:** For GUI app modes, bx inspects app entitlements (best effort) and warns if Apple App Sandbox is enabled, since nested sandboxing can cause startup/access issues.
+- **🧩 App already sandboxed:** For GUI app modes, bx inspects app entitlements (best effort) and warns if Apple App Sandbox is enabled, since bx's `sandbox-exec` wrapper may not apply correctly when the app is already sandboxed by macOS.
+- **⚡ Electron auto-detection:** bx detects Electron-based apps (by checking for `Electron Framework.framework` in the `.app` bundle) and automatically adds `--no-sandbox` to disable Chromium's internal sandbox, which conflicts with `sandbox-exec`. This works for VSCode, Cursor, Windsurf, and any other Electron app.
 - **🔁 App already running:** If the target app is already running, bx warns that the new workspace would open in the existing (unsandboxed) instance and asks for confirmation. This is important because Electron apps like VSCode, Cursor, etc. always reuse the running process — `sandbox-exec` has no effect on the already-running instance.
 
 ### Single-instance apps

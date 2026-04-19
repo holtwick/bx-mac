@@ -62,10 +62,10 @@ bx xcode ~/work/my-ios-app -- MyApp.xcworkspace # sandbox dir + explicit open ta
 path = "/usr/local/bin/code"
 
 # Add a new app (auto-discovered via bundle ID)
+# --no-sandbox is auto-detected for Electron apps
 [cursor]
 bundle = "com.todesktop.230313mzl4w4u92"
 binary = "Contents/MacOS/Cursor"
-args = ["--no-sandbox"]
 
 # Add a new app (explicit path, no discovery)
 [zed]

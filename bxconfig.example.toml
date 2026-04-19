@@ -39,7 +39,7 @@
   # [cursor]
   # bundle = "com.todesktop.230313mzl4w4u92"
   # binary = "Contents/MacOS/Cursor"
-  # args = ["--no-sandbox"]
+  # # --no-sandbox is auto-detected for Electron apps — no need to set it manually
   # passPaths = true
   # paths = ["~/work/project-b"]
 
