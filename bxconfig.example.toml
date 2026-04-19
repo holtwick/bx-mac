@@ -1,101 +1,93 @@
-# ~/.bxconfig.toml — bx app configuration
+# ~/.bxconfig.toml - bx app configuration
 #
-# Define applications that can be launched in the sandbox.
-# Each [<name>] section becomes available as: bx <name> [workdir...]
-# The [apps.<name>] prefix also works for backward compatibility.
+# Each [<name>] section becomes a mode: bx <name> [workdir...]
+# Built-in modes (code, xcode, term, claude, exec) are always available
+# and can be overridden here.
 #
-# Resolution order for finding the app executable:
-#   1. path    — explicit absolute path (highest priority)
-#   2. bundle  — auto-discovery via macOS Spotlight (mdfind)
-#              + binary (relative path inside .app bundle)
-#   3. fallback — hardcoded absolute path (last resort)
+# Resolution order:
+#   1. path     - explicit absolute path (wins if set)
+#   2. bundle   - mdfind auto-discovery (+ optional binary inside .app)
+#   3. fallback - hardcoded path (last resort)
+#
+# Find a bundle id: osascript -e 'id of app "AppName"'
 
-# --- Built-in apps (these are the defaults, override as needed) ---
+# --- Built-in overrides (optional) ---
 
-[code]
-  bundle = "com.microsoft.VSCode"
-  binary = "Contents/MacOS/Electron"
-  fallback = "/Applications/Visual Studio Code.app/Contents/MacOS/Electron"
-  args = [
-    "--no-sandbox",
-  ]
-  # paths = ["~/work/project-a", "~/work/shared-lib"]
-  # paths = ["~/work/*"]  # glob patterns supported — matches all subdirs
+# [code]
+# path = "/usr/local/bin/code"
 
-[codedesk]
-  bundle = "com.anthropic.claudefordesktop"
+# [xcode]
+# paths = ["~/work/my-ios-app"]
 
-[xcode]
-  bundle = "com.apple.dt.Xcode"
-  binary = "Contents/MacOS/Xcode"
-  fallback = "/Applications/Xcode.app/Contents/MacOS/Xcode"
-  passPaths = false
-  # paths = ["~/work/my-ios-app"]
+# --- Electron editors ---
+# --no-sandbox is auto-injected for Electron apps.
 
-  # --- Finding bundle IDs ---
-  # Run: osascript -e 'id of app "AppName"'
-  # Using bundle IDs is recommended over paths — they survive app updates,
-  # relocations, and name changes.
+[cursor]
+bundle = "com.todesktop.230313mzl4w4u92"
 
-  # --- Examples for additional apps ---
+[windsurf]
+bundle = "com.exafunction.windsurf"
 
-  # [cursor]
-  # bundle = "com.todesktop.230313mzl4w4u92"
-  # binary = "Contents/MacOS/Cursor"
-  # # --no-sandbox is auto-detected for Electron apps — no need to set it manually
-  # passPaths = true
-  # paths = ["~/work/project-b"]
+# --- Native editors ---
 
-  # [zed]
-  # bundle = "dev.zed.Zed"
-  # binary = "Contents/MacOS/zed"
+[zed]
+bundle = "dev.zed.Zed"
 
-  # [fleet]
-  # path = "/Applications/Fleet.app/Contents/MacOS/Fleet"
+# --- Claude Desktop (Anthropic native app) ---
+# passPaths = false - Claude Desktop does not take workdirs as CLI args,
+# the workdir only scopes the sandbox.
 
-  # [sublime]
-  # bundle = "com.sublimetext.4"
-  # binary = "Contents/MacOS/sublime_text"
+[claude-desktop]
+bundle = "com.anthropic.claudefordesktop"
+passPaths = false
 
-  # --- Workdir shortcuts (inherit from another app via mode) ---
-  # Only paths needed — everything else is inherited from the referenced app.
+# --- Workdir shortcuts ---
+# A section with only `paths` (no mode/bundle/path) implicitly uses `code`.
+# Perfect for one-key project launchers: `bx myproject`.
 
-  # [myproject]
-  # mode = "code"
-  # paths = ["~/work/my-project", "~/work/shared-lib"]
+# [myproject]
+# paths = ["~/work/my-project", "~/work/shared-lib"]
 
-  # [ios]
-  # mode = "xcode"
-  # paths = ["~/work/my-ios-app"]
+# Explicit parent via `mode` when you want a different editor:
 
-  # --- profile option ---
-  # profile = true                    — use an isolated profile (data in ~/.vscode-sandbox/)
-  # profile = "~/my-vscode-profile"   — use a custom path for profile data
-  # Can also be enabled per-invocation with: bx --vscode-user [path] <mode> [workdir...]
+# [myios]
+# mode = "xcode"
+# paths = ["~/work/my-ios-app"]
 
-  # --- background option ---
-  # background = true — run the app detached (like nohup &), output goes to /tmp/bx-<pid>.log
-  # Can also be enabled per-invocation with: bx --background <mode> [workdir...]
+# --- Project groups (same editor, different sets) ---
+# Define several shortcuts pointing at related repo clusters.
+# Globs keep the list short; individual paths can be toggled by
+# commenting them out in place.
 
-  # [myserver]
-  # mode = "exec"
-  # background = true
-  # paths = ["~/work/my-server"]
+# [frontend]
+# paths = [
+#   "~/work/web-*",          # glob: all matching repos
+#   "~/work/shared-ui",
+#   # "~/work/legacy-ui",    # temporarily disabled
+# ]
+# background = true
 
-  # --- passPaths options ---
-  # true              — all paths are passed as launch arguments (default)
-  # false             — no paths are passed (e.g. xcode)
-  # N                 — only the first N paths are passed (sandbox covers all)
-  # ["~/p1", "~/p2"]  — pass these explicit paths instead of workdirs
+# --- passPaths = N pattern ---
+# Sandbox many directories but only open the first N as editor args.
+# Useful when the editor should focus on one repo while sibling
+# repos stay accessible (for imports, local deps, symlinks).
 
-  # [web]
-  # bundle = "com.example.browser"
-  # binary = "Contents/MacOS/Browser"
-  # args = ["--no-sandbox"]
-  # passPaths = 1
-  # paths = ["~/work/main-project", "~/work/shared-deps"]
+# [main]
+# passPaths = 1
+# paths = [
+#   "~/work/app",            # opened in the editor
+#   "~/work/shared-lib",     # sandboxed, not opened
+#   "~/work/design-tokens",
+# ]
 
-  # [myeditor]
-  # mode = "code"
-  # passPaths = ["~/work/main-project"]
-  # paths = ["~/work/main-project", "~/work/shared-deps"]
+# --- Field reference ---
+# mode       - inherit from another app
+# path       - explicit absolute executable path
+# bundle     - macOS bundle id for mdfind
+# binary     - relative path inside .app (default: Contents/MacOS/<AppName>)
+# fallback   - absolute fallback path
+# args       - extra launch args
+# passPaths  - true (all workdirs) | false | N (first N) | ["~/p1", ...]
+# paths      - default workdirs when none given on CLI (supports ~ and globs)
+# background - run detached, log to /tmp/bx-<pid>.log
+# profile    - true (~/.vscode-sandbox) | "custom/path" for isolated data
