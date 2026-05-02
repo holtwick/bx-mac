@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, afterEach } from "vitest"
 
-import { parseArgs } from "./args.js"
+import { parseArgs, parseSubcommand } from "./args.js"
 
 const ALL_MODES = ["code", "xcode", "term", "claude", "exec"]
 
@@ -139,5 +139,92 @@ describe("parseArgs", () => {
     })
     vi.spyOn(console, "error").mockImplementation(() => { })
     expect(() => parseArgs(ALL_MODES)).toThrow("process.exit(1)")
+  })
+})
+
+describe("parseSubcommand", () => {
+  const originalArgv = process.argv
+
+  afterEach(() => {
+    process.argv = originalArgv
+  })
+
+  function argv(...args: string[]) {
+    process.argv = ["node", "bx.js", ...args]
+  }
+
+  it("no args => launch", () => {
+    argv()
+    const result = parseSubcommand()
+    expect(result.subcommand).toBe("launch")
+  })
+
+  it("unknown arg => launch (pass-through)", () => {
+    argv("code", "/tmp/project")
+    const result = parseSubcommand()
+    expect(result.subcommand).toBe("launch")
+  })
+
+  it("inspect <path> => inspect with inspectPath", () => {
+    argv("inspect", "/Users/test/.aws")
+    const result = parseSubcommand()
+    expect(result.subcommand).toBe("inspect")
+    expect(result.inspectPath).toBe("/Users/test/.aws")
+  })
+
+  it("inspect with no path => exit 1", () => {
+    argv("inspect")
+    vi.spyOn(process, "exit").mockImplementation((code?: any) => {
+      throw new Error(`process.exit(${code})`)
+    })
+    vi.spyOn(console, "error").mockImplementation(() => { })
+    expect(() => parseSubcommand()).toThrow("process.exit(1)")
+  })
+
+  it("inspect --help => exit 0", () => {
+    argv("inspect", "--help")
+    vi.spyOn(process, "exit").mockImplementation((code?: any) => {
+      throw new Error(`process.exit(${code})`)
+    })
+    vi.spyOn(console, "log").mockImplementation(() => { })
+    expect(() => parseSubcommand()).toThrow("process.exit(0)")
+  })
+
+  it("snapshot => snapshot subcommand", () => {
+    argv("snapshot")
+    const result = parseSubcommand()
+    expect(result.subcommand).toBe("snapshot")
+  })
+
+  it("snapshot --help => exit 0", () => {
+    argv("snapshot", "--help")
+    vi.spyOn(process, "exit").mockImplementation((code?: any) => {
+      throw new Error(`process.exit(${code})`)
+    })
+    vi.spyOn(console, "log").mockImplementation(() => { })
+    expect(() => parseSubcommand()).toThrow("process.exit(0)")
+  })
+
+  it("diff => diff subcommand, exitCode false", () => {
+    argv("diff")
+    const result = parseSubcommand()
+    expect(result.subcommand).toBe("diff")
+    expect(result.exitCode).toBe(false)
+  })
+
+  it("diff --exit-code => diff subcommand, exitCode true", () => {
+    argv("diff", "--exit-code")
+    const result = parseSubcommand()
+    expect(result.subcommand).toBe("diff")
+    expect(result.exitCode).toBe(true)
+  })
+
+  it("diff --help => exit 0", () => {
+    argv("diff", "--help")
+    vi.spyOn(process, "exit").mockImplementation((code?: any) => {
+      throw new Error(`process.exit(${code})`)
+    })
+    vi.spyOn(console, "log").mockImplementation(() => { })
+    expect(() => parseSubcommand()).toThrow("process.exit(0)")
   })
 })

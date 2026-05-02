@@ -1,10 +1,10 @@
-import { writeFileSync, rmSync, openSync, closeSync, mkdtempSync, realpathSync } from "node:fs"
+import { writeFileSync, rmSync, openSync, closeSync, mkdtempSync, realpathSync, statSync } from "node:fs"
 import { dirname, join, resolve } from "node:path"
 import { spawn, execSync } from "node:child_process"
 import { createInterface } from "node:readline"
 import process from "node:process"
 import { checkOwnSandbox, checkVSCodeTerminal, checkExternalSandbox, checkWorkDirs, checkAppAlreadyRunning } from "./guards.js"
-import { parseArgs } from "./args.js"
+import { parseArgs, parseSubcommand } from "./args.js"
 import { PROTECTED_DOTDIRS, PROTECTED_HOME_DOTFILES, PROTECTED_LIBRARY_DIRS, parseHomeConfig, collectBlockedDirs, collectIgnoredPaths, collectReadOnlyDotfiles, collectSystemDenyPaths, generateProfile } from "./profile.js"
 import { setupVSCodeProfile, buildCommand, bringAppToFront, getActivationCommand, getNestedSandboxWarning } from "./modes.js"
 import { loadConfig, getAvailableApps, getValidModes } from "./config.js"
@@ -12,6 +12,9 @@ import { expandGlobs } from "./paths.js"
 import { printHelp } from "./help.js"
 import { printDryRunTree } from "./drytree.js"
 import { fmt } from "./fmt.js"
+import { tracePath } from "./tracer.js"
+import { buildSnapshot, writeSnapshot, readSnapshot, diffSnapshots, formatDiff } from "./snapshot.js"
+import type { Snapshot } from "./snapshot.js"
 
 // @ts-ignore - bundled by rolldown, replaced at build time
 import pkg from "../package.json" with { type: "json" }
@@ -28,6 +31,12 @@ if (process.argv.includes("--version") || process.argv.includes("-v")) {
 }
 
 if (process.argv.includes("--help") || process.argv.includes("-h")) {
+  // For subcommand-level --help, delegate to parseSubcommand which
+  // prints subcommand-specific help. Top-level --help uses printHelp.
+  const sub = process.argv[2]
+  if (sub === "inspect" || sub === "snapshot" || sub === "diff") {
+    parseSubcommand() // handles --help internally and exits
+  }
   printHelp(VERSION)
   process.exit(0)
 }
@@ -48,9 +57,143 @@ const HOME: string = process.env.HOME
 // --- Main ---
 
 async function main() {
-  // Sandbox checks must run before any filesystem access (realpathSync etc.)
+  // Sandbox checks must run before any subcommand (including inspect, snapshot, diff).
+  // If we're inside an existing sandbox, all filesystem access is unreliable --
+  // statSync on protected paths fails with EPERM, causing inspect to silently report
+  // BLOCKED paths as nonexistent.
   checkOwnSandbox()
   checkExternalSandbox()
+
+  const parsed = parseSubcommand()
+
+  if (parsed.subcommand === "inspect") {
+    const targetPath = resolve(parsed.inspectPath!)
+    const { allowed, readOnly } = parseHomeConfig(HOME, [])
+    const config = loadConfig(HOME)
+    const apps = getAvailableApps(config)
+
+    // Collect workdirs from every app that has default paths configured.
+    // For inspect, we don't need a specific mode — just any configured workdirs
+    // to check workdir membership and workdir .bxignore layers.
+    const workDirs: string[] = []
+    for (const app of Object.values(apps)) {
+      if (app.paths?.length) {
+        for (const p of app.paths) {
+          const expanded = expandGlobs([p], HOME)
+          for (const e of expanded) {
+            try { workDirs.push(realpathSync(resolve(e))) } catch { /* skip */ }
+          }
+        }
+      }
+    }
+
+    const matches = tracePath(targetPath, HOME, workDirs, { allowed, readOnly })
+
+    // Check if path exists on disk
+    let nonexistent = false
+    try { statSync(targetPath) } catch { nonexistent = true }
+
+    console.log(`\nEvaluating: ${targetPath}`)
+    if (nonexistent) {
+      console.log(`Note: path does not exist on disk\n`)
+    }
+
+    for (const match of matches) {
+      const accessLabel = match.access === "allowed"
+        ? "ALLOWED"
+        : match.access === "read-only"
+          ? "READ-ONLY"
+          : "BLOCKED"
+      const layerNum = (matches.indexOf(match) + 1).toString().padStart(2, " ")
+      const layerDisplay = `Layer ${layerNum}: ${match.layer}`
+      console.log(`${layerDisplay.padEnd(58)}→ ${accessLabel}`)
+      if (match.source) {
+        console.log(`         source: ${match.source.value}`)
+      }
+    }
+
+    // Effective access: first match is highest priority
+    const effective = matches[0]
+    const effLabel = effective.access === "allowed"
+      ? "ALLOWED"
+      : effective.access === "read-only"
+        ? "READ-ONLY"
+        : "BLOCKED"
+
+    if (effective.layer === "default allow" && matches.length === 1) {
+      console.log(`\nEffective: ${effLabel} (no rules match)\n`)
+    } else {
+      console.log(`\nEffective: ${effLabel} (by ${effective.layer})\n`)
+    }
+
+    process.exit(0)
+  }
+
+  if (parsed.subcommand === "snapshot") {
+    const config = loadConfig(HOME)
+    const apps = getAvailableApps(config)
+
+    // Collect workdirs from every configured app
+    const workDirs: string[] = []
+    for (const app of Object.values(apps)) {
+      if (app.paths?.length) {
+        for (const p of app.paths) {
+          const expanded = expandGlobs([p], HOME)
+          for (const e of expanded) {
+            try { workDirs.push(realpathSync(resolve(e))) } catch { /* skip */ }
+          }
+        }
+      }
+    }
+
+    const snapshot = buildSnapshot(HOME, workDirs)
+    writeSnapshot(snapshot)
+    console.error(`\n${fmt.info("snapshot saved to ~/.bxpolicy.snapshot")}`)
+    console.error(fmt.detail(`${snapshot.entries.length} entries`))
+    process.exit(0)
+  }
+
+  if (parsed.subcommand === "diff") {
+    // Read existing snapshot
+    let oldSnapshot: Snapshot
+    try {
+      oldSnapshot = readSnapshot(HOME)
+    } catch (err: any) {
+      console.error(`\n${fmt.error("no snapshot found")}`)
+      console.error(fmt.detail("run 'bx snapshot' first\n"))
+      process.exit(1)
+    }
+
+    // Build current snapshot
+    const diffConfig = loadConfig(HOME)
+    const diffApps = getAvailableApps(diffConfig)
+    const diffWorkDirs: string[] = []
+    for (const app of Object.values(diffApps)) {
+      if (app.paths?.length) {
+        for (const p of app.paths) {
+          const expanded = expandGlobs([p], HOME)
+          for (const e of expanded) {
+            try { diffWorkDirs.push(realpathSync(resolve(e))) } catch { /* skip */ }
+          }
+        }
+      }
+    }
+
+    const currentSnapshot = buildSnapshot(HOME, diffWorkDirs)
+
+    // Diff
+    const result = diffSnapshots(oldSnapshot, currentSnapshot)
+    const output = formatDiff(result)
+    console.log(output)
+
+    // --exit-code logic
+    if (parsed.exitCode && (result.added.length > 0 || result.removed.length > 0 || result.changed.length > 0)) {
+      process.exit(1)
+    }
+    process.exit(0)
+  }
+
+  // --- launch (existing flow) ---
 
   const config = loadConfig(HOME)
   const apps = getAvailableApps(config)

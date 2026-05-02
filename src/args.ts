@@ -1,6 +1,98 @@
 import process from "node:process"
 import { fmt } from "./fmt.js"
 
+export type Subcommand = "launch" | "inspect" | "snapshot" | "diff"
+
+export interface ParsedCommand {
+  subcommand: Subcommand
+  inspectPath?: string   // only set for "inspect"
+  exitCode?: boolean     // only set for "diff"
+}
+
+/**
+ * Detect subcommand from process.argv[2]. Called before sandbox checks
+ * and HOME checks so new subcommands can route without those guards.
+ *
+ * --help/--version handling at the top level (before main) catches
+ * top-level invocations (bx --help, bx --version). Subcommand-level
+ * --help (bx inspect --help, bx snapshot --help, bx diff --help) is
+ * handled here, since the subcommand keyword is argv[2] and --help is
+ * argv[3].
+ */
+export function parseSubcommand(): ParsedCommand {
+  const arg = process.argv[2]
+
+  if (arg === "inspect") {
+    const pathArg = process.argv[3]
+    if (!pathArg || pathArg === "--help" || pathArg === "-h") {
+      if (pathArg === "--help" || pathArg === "-h") {
+        console.log(INSPECT_HELP)
+        process.exit(0)
+      }
+      console.error(`\n${fmt.error("inspect requires a path argument")}`)
+      console.error(fmt.detail("usage: bx inspect <path>\n"))
+      process.exit(1)
+    }
+    return { subcommand: "inspect", inspectPath: pathArg }
+  }
+
+  if (arg === "snapshot") {
+    const flag = process.argv[3]
+    if (flag === "--help" || flag === "-h") {
+      console.log(SNAPSHOT_HELP)
+      process.exit(0)
+    }
+    return { subcommand: "snapshot" }
+  }
+
+  if (arg === "diff") {
+    const flag = process.argv[3]
+    if (flag === "--help" || flag === "-h") {
+      console.log(DIFF_HELP)
+      process.exit(0)
+    }
+    const exitCode = process.argv.slice(3).includes("--exit-code")
+    return { subcommand: "diff", exitCode }
+  }
+
+  return { subcommand: "launch" }
+}
+
+const INSPECT_HELP = `bx inspect <path>
+
+Trace effective access for a path across all sandbox layers.
+
+Usage:
+  bx inspect <path>
+
+Options:
+  -h, --help  Show this help
+
+Output shows each layer's match (if any) and the effective access.`
+
+const SNAPSHOT_HELP = `bx snapshot
+
+Capture current policy to ~/.bxpolicy.snapshot.
+
+Usage:
+  bx snapshot
+
+Options:
+  -h, --help  Show this help
+
+Overwrites existing snapshot without prompting.`
+
+const DIFF_HELP = `bx diff
+
+Compare current policy against the last snapshot (~/.bxpolicy.snapshot).
+
+Usage:
+  bx diff [--exit-code]
+
+Options:
+  --exit-code  Exit with code 1 if differences found, 0 if identical
+  -h, --help   Show this help`
+
 export interface Args {
   mode: string
   workArgs: string[]

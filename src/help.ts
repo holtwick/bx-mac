@@ -67,4 +67,10 @@ Configuration:
                          / or .         self-protect: block entire directory
   <dir>/.bxprotect     marker file: block the containing directory
 
+
+Inspection:
+  bx inspect <path>       trace effective access for a path across all layers
+  bx snapshot             capture current policy to ~/.bxpolicy.snapshot
+  bx diff [--exit-code]   compare current policy against last snapshot
+
 https://github.com/holtwick/bx-mac`
