@@ -339,7 +339,7 @@ export function collectBlockedDirs(
 
 // --- Ignored path collection ---
 
-function collectProtectedContainers(home: string): string[] {
+export function collectProtectedContainers(home: string): string[] {
   const containerDirs = ["Containers", "Group Containers"]
   const matched: string[] = []
   for (const dir of containerDirs) {
