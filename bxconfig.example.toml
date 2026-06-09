@@ -1,7 +1,7 @@
 # ~/.bxconfig.toml - bx app configuration
 #
 # Each [<name>] section becomes a mode: bx <name> [workdir...]
-# Built-in modes (code, xcode, term, claude, exec) are always available
+# Built-in modes (code, xcode, antigravity, term, claude, exec) are always available
 # and can be overridden here.
 #
 # Resolution order:

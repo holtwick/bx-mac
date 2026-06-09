@@ -88,6 +88,7 @@ pnpm link -g
 | `bx [workdir...]` | 🖥️ VSCode (default) |
 | `bx code [workdir...]` | 🖥️ VSCode (explicit) |
 | `bx xcode [workdir...] [-- project-or-workspace]` | 🛠️ Xcode |
+| `bx antigravity [workdir...]` | 🪐 Antigravity (Google) |
 | `bx term [workdir...]` | 💻 Sandboxed login shell (`$SHELL -l`) |
 | `bx claude [workdir...]` | 🤖 Claude Code CLI |
 | `bx exec [workdir...] -- cmd` | ⚡ Any command you want |
@@ -159,7 +160,7 @@ On normal runs, bx also prints a short policy summary (number of workdirs, block
 
 ### `~/.bxconfig.toml`
 
-App definitions in TOML format. Each `[<name>]` section becomes a CLI mode — use it as `bx <name> [workdir...]`. Built-in apps (`code`, `xcode`) are always available and can be overridden.
+App definitions in TOML format. Each `[<name>]` section becomes a CLI mode — use it as `bx <name> [workdir...]`. Built-in apps (`code`, `xcode`, `antigravity`) are always available and can be overridden.
 
 ```toml
 # Add Cursor (auto-discovered via macOS Spotlight)

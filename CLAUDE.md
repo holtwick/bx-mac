@@ -35,6 +35,7 @@ pnpm link -g      # install "bx" command globally
 bx [workdir]                                # VSCode (default mode)
 bx code [workdir]                           # VSCode (explicit)
 bx xcode [workdir] [-- project-or-workspace] # Xcode
+bx antigravity [workdir]                    # Antigravity (Google)
 bx term [workdir]                           # sandboxed login shell
 bx claude [workdir]                         # Claude Code CLI
 bx exec [workdir] -- command [args...]      # arbitrary command
@@ -54,7 +55,7 @@ bx xcode ~/work/my-ios-app -- MyApp.xcworkspace # sandbox dir + explicit open ta
 
 ### Configuration files
 
-**`~/.bxconfig.toml`** — App definitions (TOML format). Each `[<name>]` section becomes a mode usable as `bx <name> [workdir...]`. Built-in apps (`code`, `xcode`) are always available and can be overridden here.
+**`~/.bxconfig.toml`** — App definitions (TOML format). Each `[<name>]` section becomes a mode usable as `bx <name> [workdir...]`. Built-in apps (`code`, `xcode`, `antigravity`) are always available and can be overridden here.
 
 ```toml
 # Override built-in app path
