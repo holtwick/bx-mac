@@ -191,6 +191,8 @@ describe("getAvailableApps", () => {
     expect(apps.code).toBeDefined()
     expect(apps.code.bundle).toBe("com.microsoft.VSCode")
     expect(apps.xcode).toBeDefined()
+    expect(apps.antigravity).toBeDefined()
+    expect(apps.antigravity.bundle).toBe("com.google.antigravity")
   })
 
   it("merges config apps over builtins", () => {

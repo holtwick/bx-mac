@@ -88,6 +88,7 @@ pnpm link -g
 | `bx [workdir...]` | 🖥️ VSCode (default) |
 | `bx code [workdir...]` | 🖥️ VSCode (explicit) |
 | `bx xcode [workdir...] [-- project-or-workspace]` | 🛠️ Xcode |
+| `bx antigravity [workdir...]` | 🪐 Antigravity (Google) |
 | `bx term [workdir...]` | 💻 Sandboxed login shell (`$SHELL -l`) |
 | `bx claude [workdir...]` | 🤖 Claude Code CLI |
 | `bx exec [workdir...] -- cmd` | ⚡ Any command you want |
@@ -159,7 +160,7 @@ On normal runs, bx also prints a short policy summary (number of workdirs, block
 
 ### `~/.bxconfig.toml`
 
-App definitions in TOML format. Each `[<name>]` section becomes a CLI mode — use it as `bx <name> [workdir...]`. Built-in apps (`code`, `xcode`) are always available and can be overridden.
+App definitions in TOML format. Each `[<name>]` section becomes a CLI mode — use it as `bx <name> [workdir...]`. Built-in apps (`code`, `xcode`, `antigravity`) are always available and can be overridden.
 
 ```toml
 # Add Cursor (auto-discovered via macOS Spotlight)
@@ -432,6 +433,7 @@ These are great when available, but they only protect within their own tool. bx 
 
 ## 🔗 Alternatives
 
+- [Anthropic Sandbox Runtime](https://github.com/anthropic-experimental/sandbox-runtime) (`srt`) — Anthropic's OS-level sandbox for AI agents and MCP servers, on macOS (`sandbox-exec`) and Linux (`bubblewrap`). Like bx it uses **deny-then-allow for filesystem reads** (open by default, sensitive paths blocked), but adds **allow-only writes** and **proxy-based network filtering** (all network denied by default, mediated via HTTP/SOCKS5 proxies). That bidirectional isolation including the network layer is stronger than bx, which only restricts the filesystem and leaves network access untouched. If you need network egress control around an agent, `srt` is the better fit; bx focuses narrowly on keeping editors and tools functional while blocking sensitive files.
 - [Agent Safehouse](https://agent-safehouse.dev/) — macOS kernel-level sandboxing for LLM coding agents via `sandbox-exec`. Uses a **deny-first model**: everything is blocked by default and only explicitly listed paths are opened up. This gives you theoretically stricter control (e.g. `~/Library` is fully blocked and only specific subdirs are allowed), but requires more configuration — tools and runtimes that need paths you haven't whitelisted will break silently. If you need that level of precision and are willing to tune profiles per tool, Agent Safehouse may be the better fit. bx uses the opposite **allow-first model** (only sensitive paths are blocked), which works out of the box for VSCode, shells, Claude Code, and other tools without any per-tool configuration.
 - [Docker AI Sandboxes](https://docs.docker.com/ai/sandboxes/) — Docker's built-in sandbox environment for AI coding agents. Runs tools in isolated containers with controlled filesystem and network access. Stronger isolation than kernel-level sandboxing, but requires Docker Desktop and adds container overhead.
 - **Docker / VMs** — for stronger isolation, run AI tools in a virtualized environment (containers, VMs). Full process and network isolation at the cost of setup overhead.

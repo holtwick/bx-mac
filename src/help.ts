@@ -58,7 +58,7 @@ Configuration:
                          profile = true|"path"  use an isolated app profile
                          paths = ["~/work/*"]   default workdirs (globs supported)
                          background = true      run in background by default
-                       built-in apps (code, xcode) can be overridden
+                       built-in apps (code, xcode, antigravity) can be overridden
   ~/.bxignore          sandbox rules (one per line):
                          path         block access (deny)
                          rw:path      allow read-write access (overrides built-in protection)

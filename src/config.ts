@@ -41,6 +41,11 @@ export const BUILTIN_APPS: Record<string, AppDefinition> = {
     fallback: "/Applications/Xcode.app/Contents/MacOS/Xcode",
     passPaths: false,
   },
+  antigravity: {
+    bundle: "com.google.antigravity",
+    binary: "Contents/MacOS/Antigravity",
+    fallback: "/Applications/Antigravity.app/Contents/MacOS/Antigravity",
+  },
 }
 
 /** Shell-only built-in modes that are not app definitions */
