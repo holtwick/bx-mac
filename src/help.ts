@@ -1,4 +1,4 @@
-import { loadConfig, getAvailableApps } from "./config.js"
+import { loadConfig, getAvailableApps, BUILTIN_APPS } from "./config.js"
 
 export function printHelp(version: string) {
   const HOME = process.env.HOME
@@ -58,7 +58,7 @@ Configuration:
                          profile = true|"path"  use an isolated app profile
                          paths = ["~/work/*"]   default workdirs (globs supported)
                          background = true      run in background by default
-                       built-in apps (code, xcode, antigravity) can be overridden
+                       built-in apps (${Object.keys(BUILTIN_APPS).join(", ")}) can be overridden
   ~/.bxignore          sandbox rules (one per line):
                          path         block access (deny)
                          rw:path      allow read-write access (overrides built-in protection)
