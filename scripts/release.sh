@@ -24,7 +24,8 @@ fi
 
 # Tag and push (skip if tag already exists)
 git tag "${TAG}" 2>/dev/null || echo "Tag ${TAG} already exists, reusing it."
-git push origin "${TAG}" 2>/dev/null || true
+git push gh "${TAG}" 2>/dev/null || true
+git push cb "${TAG}" 2>/dev/null || true
 
 # Show changes since last release for context
 PREV_TAG=$(git tag --sort=-v:refname | sed -n '2p')
