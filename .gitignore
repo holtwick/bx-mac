@@ -3,3 +3,4 @@ dist
 settings.local.json
 not-in-git.txt
 /Icon?
+RELEASE.md
