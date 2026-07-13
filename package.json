@@ -1,6 +1,6 @@
 {
   "name": "bx-mac",
-  "version": "1.8.2",
+  "version": "1.8.3",
   "description": "Sandbox any macOS app — only your project directory stays accessible",
   "type": "module",
   "bin": {
