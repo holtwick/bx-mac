@@ -1,13 +1,13 @@
 {
   "name": "bx-mac",
-  "version": "1.7.3",
+  "version": "1.8.0",
   "description": "Sandbox any macOS app — only your project directory stays accessible",
   "type": "module",
   "bin": {
     "bx": "dist/bx.js"
   },
   "files": [
-    "dist"
+    "dist/bx.js"
   ],
   "scripts": {
     "start": "npm run build && node ./dist/bx.js",
