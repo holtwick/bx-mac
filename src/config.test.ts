@@ -284,6 +284,7 @@ describe("getValidModes", () => {
     const modes = getValidModes(apps)
     expect(modes).toContain("term")
     expect(modes).toContain("claude")
+    expect(modes).toContain("pi")
     expect(modes).toContain("exec")
     expect(modes).toContain("code")
     expect(modes).toContain("xcode")
