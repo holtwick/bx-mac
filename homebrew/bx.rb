@@ -1,19 +1,19 @@
 class Bx < Formula
-  desc "Launch apps in a macOS sandbox with only the project directory accessible"
+  desc "Launch apps in a macOS sandbox — only the project directory is accessible"
   homepage "https://github.com/holtwick/bx-mac"
-  url "https://registry.npmjs.org/bx-mac/-/bx-mac-1.8.0.tgz"
-  sha256 "d4f35bc7035b1d3509983bbf4c27c38da88481e6a3c308ba3181f30ebd319184"
+  url "https://github.com/holtwick/bx-mac/releases/download/v1.8.2/bx.js"
+  sha256 "1e74435bab17e3e8b30fff61876787cd38bfaacd44fdd9f63eb0b259e7d61060"
+  version "1.8.2"
   license "MIT"
 
-  depends_on :macos
   depends_on "node"
+  depends_on :macos
 
   def install
-    system "npm", "install", *std_npm_args
-    bin.install_symlink Dir["#{libexec}/bin/*"]
+    bin.install "bx.js" => "bx"
   end
 
   test do
-    assert_match version.to_s, shell_output("#{bin}/bx --version")
+    assert_match "sandbox:", shell_output("#{bin}/bx 2>&1", 1)
   end
 end
