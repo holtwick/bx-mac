@@ -49,7 +49,7 @@ export const BUILTIN_APPS: Record<string, AppDefinition> = {
 }
 
 /** Shell-only built-in modes that are not app definitions */
-export const BUILTIN_MODES = ["term", "claude", "exec"] as const
+export const BUILTIN_MODES = ["term", "claude", "pi", "exec"] as const
 export type BuiltinMode = (typeof BUILTIN_MODES)[number]
 
 export interface BxConfig {

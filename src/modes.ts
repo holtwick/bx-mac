@@ -118,7 +118,9 @@ function buildBuiltinCommand(mode: BuiltinMode, appArgs: string[]): Command {
       return { bin: shell, args: ["-l"] }
     }
     case "claude":
-      return { bin: "claude", args: [] }
+      return { bin: "claude", args: appArgs }
+    case "pi":
+      return { bin: "pi", args: appArgs }
     case "exec":
       return { bin: appArgs[0], args: appArgs.slice(1) }
   }

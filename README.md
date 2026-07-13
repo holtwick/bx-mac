@@ -91,6 +91,7 @@ pnpm link -g
 | `bx antigravity [workdir...]` | 🪐 Antigravity (Google) |
 | `bx term [workdir...]` | 💻 Sandboxed login shell (`$SHELL -l`) |
 | `bx claude [workdir...]` | 🤖 Claude Code CLI |
+| `bx pi [workdir...]` | 🥧 Pi Coding Agent CLI ([pi.dev](https://pi.dev)) |
 | `bx exec [workdir...] -- cmd` | ⚡ Any command you want |
 | `bx <app> [workdir...] [-- app-args...]` | 🔌 Any app from `~/.bxconfig.toml` |
 
@@ -118,6 +119,9 @@ bx term ~/work/my-project
 
 # 🤖 Let Claude Code work on a project — nothing else visible
 bx claude ~/work/my-project
+
+# 🥧 Sandbox the Pi coding agent (recommended by pi.dev — Pi has no built-in sandbox)
+bx pi ~/work/my-project
 
 # 🛠️ Xcode (built-in) — sandbox only, open picker/restore state
 bx xcode ~/work/my-ios-app

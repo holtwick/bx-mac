@@ -17,6 +17,7 @@ Usage:
   bx [workdir...]                            VSCode (default)
 ${appSection}  bx term [workdir...]                       sandboxed login shell
   bx claude [workdir...]                     Claude Code CLI
+  bx pi [workdir...]                         Pi Coding Agent CLI
   bx exec [workdir...] -- command [args...]  arbitrary command`
 }
 

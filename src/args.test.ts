@@ -2,7 +2,7 @@ import { describe, it, expect, vi, afterEach } from "vitest"
 
 import { parseArgs } from "./args.js"
 
-const ALL_MODES = ["code", "xcode", "term", "claude", "exec"]
+const ALL_MODES = ["code", "xcode", "term", "claude", "pi", "exec"]
 
 describe("parseArgs", () => {
   const originalArgv = process.argv

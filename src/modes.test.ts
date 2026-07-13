@@ -71,6 +71,23 @@ describe("buildCommand", () => {
     expect(cmd.bin).toBe("claude")
   })
 
+  it("claude mode passes args after -- through", () => {
+    const cmd = buildCommand("claude", ["/work/a"], home, false, ["--resume"], testApps)
+    expect(cmd.bin).toBe("claude")
+    expect(cmd.args).toEqual(["--resume"])
+  })
+
+  it("pi mode launches pi CLI", () => {
+    const cmd = buildCommand("pi", ["/work/a"], home, false, [], testApps)
+    expect(cmd.bin).toBe("pi")
+  })
+
+  it("pi mode passes args after -- through", () => {
+    const cmd = buildCommand("pi", ["/work/a"], home, false, ["--model", "opus"], testApps)
+    expect(cmd.bin).toBe("pi")
+    expect(cmd.args).toEqual(["--model", "opus"])
+  })
+
   it("exec mode passes the command through", () => {
     const cmd = buildCommand("exec", ["/work/a"], home, false, ["python", "train.py"], testApps)
     expect(cmd.bin).toBe("python")

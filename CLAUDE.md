@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Overview
 
-This repository contains a macOS sandbox solution to launch applications in a protected environment. The home directory is locked down – only the explicitly provided working directory is accessible. Supports VSCode, terminal shells, Claude Code CLI, and arbitrary commands.
+This repository contains a macOS sandbox solution to launch applications in a protected environment. The home directory is locked down – only the explicitly provided working directory is accessible. Supports VSCode, terminal shells, Claude Code CLI, Pi Coding Agent CLI, and arbitrary commands.
 
 ## Files
 
@@ -38,6 +38,7 @@ bx xcode [workdir] [-- project-or-workspace] # Xcode
 bx antigravity [workdir]                    # Antigravity (Google)
 bx term [workdir]                           # sandboxed login shell
 bx claude [workdir]                         # Claude Code CLI
+bx pi [workdir]                             # Pi Coding Agent CLI (pi.dev)
 bx exec [workdir] -- command [args...]      # arbitrary command
 
 # Custom apps from ~/.bxconfig.toml become modes automatically:
