@@ -187,7 +187,7 @@ path = "/usr/local/bin/code"
 | --- | --- |
 | `mode` | Inherit from another app (e.g. `"code"`, `"cursor"`) — only `paths` / overrides needed |
 | `bundle` | macOS bundle identifier — used with `mdfind` to find the app automatically |
-| `binary` | Relative path to the executable inside the `.app` bundle |
+| `binary` | Relative path to the executable inside the `.app` bundle (optional — resolved from `Info.plist` when omitted or stale) |
 | `path` | Absolute path to the executable **or** `.app` bundle (highest priority, skips discovery) |
 | `fallback` | Absolute fallback path if `mdfind` discovery fails |
 | `args` | Extra arguments always passed to the app |
@@ -197,6 +197,8 @@ path = "/usr/local/bin/code"
 | `profile` | Use an isolated app profile (`true` = `~/.vscode-sandbox`, `"path"` = custom path) |
 
 **Resolution order:** `path` → `mdfind` by `bundle` + `binary` → `fallback`
+
+If a resolved executable does not exist, `bx` reads `CFBundleExecutable` from the bundle's `Info.plist` and uses that instead. Apps that rename their executable across versions (VSCode changed `Contents/MacOS/Electron` to `Contents/MacOS/Code`) therefore keep working without a config change.
 
 `passPaths` controls launch argument behavior and is independent of sandbox scope. Even with `passPaths = false`, the provided `workdir...` still defines what the sandbox can access. Use `passPaths = 1` to pass only the first path as a launch argument, or `passPaths = ["~/specific/path"]` to pass explicit paths instead of workdirs.
 

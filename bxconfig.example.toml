@@ -84,7 +84,7 @@ passPaths = false
 # mode       - inherit from another app
 # path       - explicit absolute executable path
 # bundle     - macOS bundle id for mdfind
-# binary     - relative path inside .app (default: Contents/MacOS/<AppName>)
+# binary     - relative path inside .app (optional, default: CFBundleExecutable from Info.plist)
 # fallback   - absolute fallback path
 # args       - extra launch args
 # passPaths  - true (all workdirs) | false | N (first N) | ["~/p1", ...]

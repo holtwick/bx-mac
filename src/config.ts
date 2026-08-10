@@ -212,7 +212,7 @@ export function getValidModes(apps: Record<string, AppDefinition>): string[] {
  * Used when a configured `binary` no longer exists (apps rename their
  * executable across versions, e.g. VSCode: Electron → Code).
  */
-function executableFromInfoPlist(appPath: string): string | null {
+export function executableFromInfoPlist(appPath: string): string | null {
   try {
     const xml = execFileSync("plutil", ["-convert", "xml1", "-o", "-", join(appPath, "Contents", "Info.plist")], {
       encoding: "utf-8",
@@ -243,6 +243,12 @@ export function resolveAppPath(app: AppDefinition): string | null {
   // 1. Explicit path override
   if (app.path) {
     if (existsSync(app.path)) return app.path
+    const bundlePath = appBundleFromPath(app.path)
+    const viaPlist = bundlePath ? executableFromInfoPlist(bundlePath) : null
+    if (viaPlist) {
+      console.error(`\n${fmt.warn(`configured path not found, using ${viaPlist} instead`)}`)
+      return viaPlist
+    }
     console.error(`\n${fmt.warn(`configured path not found: ${app.path}`)}`)
   }
 

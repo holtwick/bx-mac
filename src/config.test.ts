@@ -1,5 +1,8 @@
-import { describe, it, expect, vi, beforeEach } from "vitest"
-import { loadConfig, getAvailableApps, getValidModes, BUILTIN_APPS } from "./config.js"
+import { describe, it, expect, vi, beforeEach, beforeAll, afterAll } from "vitest"
+import { mkdirSync, writeFileSync, rmSync } from "node:fs"
+import { join } from "node:path"
+import { tmpdir } from "node:os"
+import { loadConfig, getAvailableApps, getValidModes, resolveAppPath, BUILTIN_APPS } from "./config.js"
 
 vi.mock("node:fs", async () => {
   const actual = await vi.importActual<typeof import("node:fs")>("node:fs")
@@ -7,6 +10,7 @@ vi.mock("node:fs", async () => {
     ...actual,
     existsSync: vi.fn((p: string) => {
       if (p.endsWith(".bxconfig.toml")) return (vi as any).__configExists ?? false
+      if (typeof p === "string" && p.includes("bx-fixture-config")) return actual.existsSync(p)
       return true
     }),
     readFileSync: vi.fn((p: string) => {
@@ -289,5 +293,38 @@ describe("getValidModes", () => {
     expect(modes).toContain("code")
     expect(modes).toContain("xcode")
     expect(modes).toContain("myapp")
+  })
+})
+
+describe("resolveAppPath", () => {
+  const root = join(tmpdir(), "bx-fixture-config")
+  const app = join(root, "Fixture.app")
+  const realBin = join(app, "Contents", "MacOS", "fixture-bin")
+  const staleBin = join(app, "Contents", "MacOS", "OldName")
+
+  beforeAll(() => {
+    mkdirSync(join(app, "Contents", "MacOS"), { recursive: true })
+    writeFileSync(
+      join(app, "Contents", "Info.plist"),
+      `<?xml version="1.0" encoding="UTF-8"?>
+<plist version="1.0"><dict>
+<key>CFBundleExecutable</key><string>fixture-bin</string>
+</dict></plist>`,
+    )
+    writeFileSync(realBin, "")
+  })
+  afterAll(() => rmSync(root, { recursive: true, force: true }))
+
+  it("recovers renamed binary via Info.plist for explicit path", () => {
+    expect(resolveAppPath({ path: staleBin })).toBe(realBin)
+  })
+
+  it("recovers renamed binary via Info.plist for fallback", () => {
+    expect(resolveAppPath({ fallback: staleBin })).toBe(realBin)
+  })
+
+  it("returns null when the bundle does not exist", () => {
+    const missing = join(root, "Missing.app", "Contents", "MacOS", "x")
+    expect(resolveAppPath({ path: missing, fallback: missing })).toBeNull()
   })
 })

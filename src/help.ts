@@ -52,7 +52,7 @@ Configuration:
                          [name]                add a new app
                          mode = "..."           inherit from another app
                          bundle = "..."         macOS bundle ID (auto-discovery)
-                         binary = "..."         relative path in .app bundle
+                         binary = "..."         relative path in .app bundle (optional)
                          path = "..."           explicit executable path
                          args = ["..."]         extra arguments
                          passPaths = true|false|N|[...]  paths passed as launch args
