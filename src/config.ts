@@ -208,6 +208,34 @@ export function getValidModes(apps: Record<string, AppDefinition>): string[] {
 }
 
 /**
+ * Read CFBundleExecutable from an .app bundle and return its full path.
+ * Used when a configured `binary` no longer exists (apps rename their
+ * executable across versions, e.g. VSCode: Electron → Code).
+ */
+function executableFromInfoPlist(appPath: string): string | null {
+  try {
+    const xml = execFileSync("plutil", ["-convert", "xml1", "-o", "-", join(appPath, "Contents", "Info.plist")], {
+      encoding: "utf-8",
+      timeout: 5000,
+      stdio: ["ignore", "pipe", "ignore"],
+    })
+    const name = xml.match(/<key>\s*CFBundleExecutable\s*<\/key>\s*<string>([^<]+)<\/string>/)?.[1]
+    if (!name) return null
+    const full = join(appPath, "Contents", "MacOS", name)
+    return existsSync(full) ? full : null
+  } catch {
+    return null
+  }
+}
+
+/** Extract the enclosing `.app` bundle path from an executable path. */
+function appBundleFromPath(path: string): string | null {
+  if (path.endsWith(".app")) return path
+  const idx = path.indexOf(".app/")
+  return idx < 0 ? null : path.slice(0, idx + ".app".length)
+}
+
+/**
  * Resolve an AppDefinition to an executable path.
  * Resolution chain: path (explicit) → mdfind + binary → fallback
  */
@@ -231,6 +259,8 @@ export function resolveAppPath(app: AppDefinition): string | null {
         if (app.binary) {
           const fullPath = join(appPath, app.binary)
           if (existsSync(fullPath)) return fullPath
+          const viaPlist = executableFromInfoPlist(appPath)
+          if (viaPlist) return viaPlist
         } else {
           // No binary specified — return the .app path (caller uses `open -a`)
           return appPath
@@ -242,7 +272,14 @@ export function resolveAppPath(app: AppDefinition): string | null {
   }
 
   // 3. Hardcoded fallback
-  if (app.fallback && existsSync(app.fallback)) return app.fallback
+  if (app.fallback) {
+    if (existsSync(app.fallback)) return app.fallback
+    const bundlePath = appBundleFromPath(app.fallback)
+    if (bundlePath) {
+      const viaPlist = executableFromInfoPlist(bundlePath)
+      if (viaPlist) return viaPlist
+    }
+  }
 
   return null
 }
