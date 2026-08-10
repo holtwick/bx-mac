@@ -11,7 +11,7 @@
 
 AI-powered coding tools like Claude Code, Copilot, or Cline run with **broad file system access**. A misguided tool call or hallucinated path could accidentally read your SSH keys, credentials, tax documents, or private photos.
 
-**bx** wraps any application in a macOS sandbox (`sandbox-exec`) that blocks access to everything except the project directory you explicitly specify. No containers, no VMs, no setup — just one command.
+**bx** wraps any application in the macOS sandbox (`sandbox-exec`, Apple's kernel-level "Seatbelt" sandbox) that blocks access to everything except the project directory you explicitly specify. No containers, no VMs, no setup — just one command.
 
 ```bash
 bx ~/work/my-project
@@ -348,7 +348,7 @@ bx generates a macOS sandbox profile at launch time:
 
 ### Why not a simple deny-all + allow?
 
-Apple's SBPL has a critical quirk: **`deny` always wins over `allow`**, regardless of rule order:
+Apple's SBPL (Sandbox Profile Language, the Scheme dialect behind Seatbelt) has a critical quirk: **`deny` always wins over `allow`**, regardless of rule order:
 
 ```scheme
 ;; ❌ Does NOT work — the deny still blocks myproject
