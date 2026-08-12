@@ -86,7 +86,7 @@ Available fields per app:
 | `mode` | Inherit from another app definition (e.g. `"code"`, `"cursor"`) |
 | `path` | Explicit absolute path to the executable (highest priority) |
 | `bundle` | macOS bundle identifier for auto-discovery via `mdfind` |
-| `binary` | Relative path to executable inside the `.app` bundle |
+| `binary` | Relative path to executable inside the `.app` bundle (optional, falls back to `CFBundleExecutable`) |
 | `fallback` | Absolute fallback path if discovery fails |
 | `args` | Extra arguments always passed to the app |
 | `passPaths` | Paths passed as launch args (`true`/`false`/`N`/`["~/p1", "~/p2"]`) |
@@ -94,7 +94,7 @@ Available fields per app:
 | `background` | Run the app detached in the background, output to log file (`true`/`false`) |
 | `profile` | Use an isolated app profile (`true` = default `~/.vscode-sandbox`, `"path"` = custom path) |
 
-App resolution order: `path` (explicit) → `bundle` + `binary` (mdfind auto-discovery) → `fallback` (hardcoded). See `bxconfig.example.toml` for all options.
+App resolution order: `path` (explicit) → `bundle` + `binary` (mdfind auto-discovery) → `fallback` (hardcoded). If the resolved executable does not exist, `CFBundleExecutable` from the bundle's `Info.plist` is used instead - apps that rename their binary across versions (VSCode: `Electron` → `Code`) keep working without config changes. See `bxconfig.example.toml` for all options.
 
 When overriding a built-in app, only the fields you specify are replaced — the rest (e.g. `bundle`, `args`) are kept from the built-in definition. When using `mode`, all fields from the referenced app are inherited; own fields override inherited ones.
 

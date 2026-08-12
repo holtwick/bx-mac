@@ -1,7 +1,27 @@
-import { describe, it, expect, vi } from "vitest"
+import { describe, it, expect, vi, beforeAll, afterAll } from "vitest"
+import { mkdirSync, writeFileSync, rmSync } from "node:fs"
+import { join } from "node:path"
+import { tmpdir } from "node:os"
 import { buildCommand, getActivationCommand, hasAppSandboxEntitlement, isElectronApp } from "./modes.js"
 import type { AppDefinition } from "./config.js"
 import { BUILTIN_APPS } from "./config.js"
+
+// Real .app fixture: bundle name "Fixture", executable name "fixture-bin".
+// Lets us verify Info.plist lookup instead of guessing from the bundle name.
+const FIXTURE_ROOT = join(tmpdir(), "bx-fixture-modes")
+const FIXTURE_APP = join(FIXTURE_ROOT, "Fixture.app")
+
+function createFixtureBundle() {
+  mkdirSync(join(FIXTURE_APP, "Contents", "MacOS"), { recursive: true })
+  writeFileSync(
+    join(FIXTURE_APP, "Contents", "Info.plist"),
+    `<?xml version="1.0" encoding="UTF-8"?>
+<plist version="1.0"><dict>
+<key>CFBundleExecutable</key><string>fixture-bin</string>
+</dict></plist>`,
+  )
+  writeFileSync(join(FIXTURE_APP, "Contents", "MacOS", "fixture-bin"), "")
+}
 
 // Use builtin apps for tests, with fallback paths that may not exist on CI
 const testApps: Record<string, AppDefinition> = {
@@ -14,7 +34,9 @@ const testApps: Record<string, AppDefinition> = {
   customFirstPath: { path: "/test/CustomFirst", passPaths: 1 },
   customFirstTwo: { path: "/test/CustomFirstTwo", passPaths: 2 },
   customExplicitPaths: { path: "/test/CustomExplicit", passPaths: ["~/work/a", "~/work/b"] },
-  gram: { path: "/Applications/Gram.app" },
+  fixture: { path: FIXTURE_APP },
+  fixtureStaleBinary: { path: FIXTURE_APP, binary: "Contents/MacOS/OldName" },
+  fixtureValidBinary: { path: FIXTURE_APP, binary: "Contents/MacOS/fixture-bin" },
 }
 
 // Mock resolveAppPath to return the explicit path directly
@@ -45,6 +67,9 @@ vi.mock("node:fs", async () => {
 
 describe("buildCommand", () => {
   const home = "/Users/testuser"
+
+  beforeAll(() => createFixtureBundle())
+  afterAll(() => rmSync(FIXTURE_ROOT, { recursive: true, force: true }))
 
   it("code mode opens VSCode with workdirs", () => {
     const cmd = buildCommand("code", ["/work/a", "/work/b"], home, false, [], testApps)
@@ -145,9 +170,25 @@ describe("buildCommand", () => {
     expect(cmd.args).not.toContain("/work/y")
   })
 
-  it("normalizes .app path to executable for custom app", () => {
-    const cmd = buildCommand("gram", ["/work/a"], home, false, [], testApps)
-    expect(cmd.bin).toBe("/Applications/Gram.app/Contents/MacOS/Gram")
+  it("normalizes .app path to executable via Info.plist", () => {
+    const cmd = buildCommand("fixture", ["/work/a"], home, false, [], testApps)
+    expect(cmd.bin).toBe(join(FIXTURE_APP, "Contents", "MacOS", "fixture-bin"))
+  })
+
+  it("falls back to Info.plist when configured binary no longer exists", () => {
+    const cmd = buildCommand("fixtureStaleBinary", ["/work/a"], home, false, [], testApps)
+    expect(cmd.bin).toBe(join(FIXTURE_APP, "Contents", "MacOS", "fixture-bin"))
+  })
+
+  it("keeps configured binary when it exists", () => {
+    const cmd = buildCommand("fixtureValidBinary", ["/work/a"], home, false, [], testApps)
+    expect(cmd.bin).toBe(join(FIXTURE_APP, "Contents", "MacOS", "fixture-bin"))
+  })
+
+  it("guesses from bundle name when Info.plist is unreadable", () => {
+    const noPlist = { fixtureNoPlist: { path: join(FIXTURE_ROOT, "NoPlist.app") } }
+    const cmd = buildCommand("fixtureNoPlist", ["/work/a"], home, false, [], noPlist)
+    expect(cmd.bin).toBe(join(FIXTURE_ROOT, "NoPlist.app", "Contents", "MacOS", "NoPlist"))
   })
 })
 
@@ -165,10 +206,10 @@ describe("getActivationCommand", () => {
   })
 
   it("returns open -a for custom app configured as .app path", () => {
-    const cmd = getActivationCommand("gram", testApps)
+    const cmd = getActivationCommand("fixture", testApps)
     expect(cmd).toEqual({
       bin: "/usr/bin/open",
-      args: ["-a", "/Applications/Gram.app"],
+      args: ["-a", FIXTURE_APP],
     })
   })
 })

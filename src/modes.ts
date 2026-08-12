@@ -4,7 +4,7 @@ import { spawn, execFileSync } from "node:child_process"
 import { createInterface } from "node:readline"
 import process from "node:process"
 import type { AppDefinition } from "./config.js"
-import { resolveAppPath, BUILTIN_MODES, type BuiltinMode } from "./config.js"
+import { resolveAppPath, executableFromInfoPlist, BUILTIN_MODES, type BuiltinMode } from "./config.js"
 import { fmt } from "./fmt.js"
 
 export interface Command {
@@ -35,9 +35,17 @@ function appBundleFromPath(path: string): string | null {
 
 function executableFromBundle(bundlePath: string, app: AppDefinition): string {
   if (!bundlePath.endsWith(".app")) return bundlePath
-  if (app.binary) return join(bundlePath, app.binary)
-  const appName = basename(bundlePath, ".app")
-  return join(bundlePath, "Contents", "MacOS", appName)
+
+  const configured = app.binary ? join(bundlePath, app.binary) : null
+  if (configured && existsSync(configured)) return configured
+
+  // Info.plist is authoritative — survives renamed executables and casing
+  // differences between bundle name and binary name.
+  const viaPlist = executableFromInfoPlist(bundlePath)
+  if (viaPlist) return viaPlist
+
+  if (configured) return configured
+  return join(bundlePath, "Contents", "MacOS", basename(bundlePath, ".app"))
 }
 
 // --- Electron detection ---
