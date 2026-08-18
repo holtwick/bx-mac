@@ -5,6 +5,15 @@
 [![license](https://img.shields.io/github/license/holtwick/bx-mac)](https://github.com/holtwick/bx-mac/blob/master/LICENSE)
 [![macOS](https://img.shields.io/badge/platform-macOS-lightgrey)](https://github.com/holtwick/bx-mac)
 
+> [!IMPORTANT]
+> **This project is discontinued - development continues in BX.app: [bx-ai.eu](https://bx-ai.eu/)**
+>
+> Thanks to everyone who used, tested, and improved `bx`! The ideas from this CLI live on in **BX.app**, a full macOS app that takes the same sandbox concept much further - with a proper UI, ongoing maintenance, and support.
+>
+> This repository stays online as an archive. It still works, but there will be **no further updates, bug fixes, or new features**. If you rely on sandboxing your AI tools, please head over to **[bx-ai.eu](https://bx-ai.eu/)**.
+
+---
+
 > **Put your AI in a box.** Launch VSCode, Claude Code, a terminal, or any command in a macOS sandbox — your tools can only see the project you're working on. Not a vault, but a reasonable safety net.
 
 ## 🤔 Why?
