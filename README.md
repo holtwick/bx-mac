@@ -1,16 +1,39 @@
-# 📦 bx
+# 📦 BX Sandbox
 
 [![npm version](https://img.shields.io/npm/v/bx-mac?color=blue)](https://www.npmjs.com/package/bx-mac)
 [![npm downloads](https://img.shields.io/npm/dm/bx-mac)](https://www.npmjs.com/package/bx-mac)
 [![license](https://img.shields.io/github/license/holtwick/bx-mac)](https://github.com/holtwick/bx-mac/blob/master/LICENSE)
 [![macOS](https://img.shields.io/badge/platform-macOS-lightgrey)](https://github.com/holtwick/bx-mac)
 
+<div align="center">
+
+<a href="https://bxsandbox.app/"><img src="assets/bx-app-icon.png" alt="BX app icon" width="128" height="128"></a>
+
+## 🔴 This CLI is archived — it lives on as **[BX.app](https://bxsandbox.app/)**
+
+**AI with a seatbelt.** Claude, VS Code, and other apps run in a sandbox<br>and can only see what you allow them to see.
+
+[![Download BX.app](https://img.shields.io/badge/Download-free%20trial-ff9f45?style=for-the-badge&logo=apple&logoColor=white)](https://bxsandbox.app/download)
+[![How it works](https://img.shields.io/badge/How%20it%20works-bxsandbox.app-2c2c2e?style=for-the-badge)](https://bxsandbox.app/)
+[![Buy](https://img.shields.io/badge/Buy-one--time%20purchase-3e5468?style=for-the-badge)](https://bxsandbox.app/buy)
+
+<a href="https://bxsandbox.app/"><img src="assets/bx-app-screenshot.png" alt="BX.app — launcher list and protection tree" width="820"></a>
+
+</div>
+
+**What BX.app adds over this CLI:**
+
+- 🖱️ **Launchers instead of commands** — pick app + folders once, then start from the BX window, the menu bar, the Dock, or a terminal alias
+- 🌳 **Protection view** — see as a tree what a session may read, write, or never see at all, *before* it runs; change it by right-click
+- 🚨 **Denied accesses recorded** — "it does nothing and I don't know why" becomes a list of exactly the paths that were turned away, with the program name next to them
+- 🧩 **Apps recognized out of the box** — VS Code and variants, JetBrains IDEs, Claude Desktop, ChatGPT, Xcode, and a dozen CLI agents, including the Electron quirks
+- 🎛️ **Menu bar status** — tells you whether the frontmost app is protected, and warns when a tool runs unprotected although a launcher exists
+- ⌨️ **Same engine on the command line** — `bx run`, `bx dry`, `bx list`, plus every launcher under a short name
+- 📝 **Rules stay readable** — `.bxignore` in gitignore syntax, global, per launcher, or per project tree
+- 🔄 **Maintained** — one-time purchase, no subscription, three-day trial; protection is never behind the paywall
+
 > [!IMPORTANT]
-> **This project is discontinued - development continues in BX.app: [bx-ai.eu](https://bx-ai.eu/)**
->
-> Thanks to everyone who used, tested, and improved `bx`! The ideas from this CLI live on in **BX.app**, a full macOS app that takes the same sandbox concept much further - with a proper UI, ongoing maintenance, and support.
->
-> This repository stays online as an archive. It still works, but there will be **no further updates, bug fixes, or new features**. If you rely on sandboxing your AI tools, please head over to **[bx-ai.eu](https://bx-ai.eu/)**.
+> This repository stays online as an **archive**. It still works, but there will be **no further updates, bug fixes, or new features**. Thanks to everyone who used, tested, and improved `bx` — if you rely on sandboxing your AI tools, head over to **[bxsandbox.app](https://bxsandbox.app/)**.
 
 ---
 
@@ -454,13 +477,23 @@ These are great when available, but they only protect within their own tool. bx 
 - **Docker / VMs** — for stronger isolation, run AI tools in a virtualized environment (containers, VMs). Full process and network isolation at the cost of setup overhead.
 - **Web sandboxes** — browser-based approaches for running AI agents. See Simon Willison's [Living dangerously with Claude](https://simonwillison.net/2025/Oct/22/living-dangerously-with-claude/) for an overview.
 
+## 🔴 Where this goes on: BX.app
+
+<a href="https://bxsandbox.app/"><img src="assets/bx-app-icon.png" alt="BX app icon" width="72" height="72"></a>
+
+Everything on this page is the CLI version of an idea that is now a maintained macOS app: **[BX.app](https://bxsandbox.app/)** — launchers instead of commands, a protection tree you can read and edit by right-click, a log of every denied access, Dock and menu bar integration, and the same `.bxignore` rules you already know. One-time purchase, three-day trial, protection never behind the paywall.
+
+[![Download BX.app](https://img.shields.io/badge/Download-free%20trial-ff9f45?style=for-the-badge&logo=apple&logoColor=white)](https://bxsandbox.app/download)
+[![How it works](https://img.shields.io/badge/How%20it%20works-bxsandbox.app-2c2c2e?style=for-the-badge)](https://bxsandbox.app/)
+[![Buy](https://img.shields.io/badge/Buy-one--time%20purchase-3e5468?style=for-the-badge)](https://bxsandbox.app/buy)
+
 ## 💛 Sponsor
 
 If you find bx useful, consider supporting its development:
 
 [GitHub Sponsors](https://github.com/sponsors/holtwick) - [Liberapay](https://liberapay.com/holtwick) - [Buy Me a Coffee](https://buymeacoffee.com/holtwick) - [Patreon](https://patreon.com/holtwick) - [Open Collective](https://opencollective.com/holtwick)
 
-Also check out my other projects: [Receipts](https://receipts-app.com) - [PDFify](https://pdfify.app)
+Also check out my other projects: [BX.app](https://bxsandbox.app) - [Receipts](https://receipts-app.com) - [PDFify](https://pdfify.app)
 
 ## 📄 License
 
