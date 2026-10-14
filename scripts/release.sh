@@ -1,7 +1,8 @@
 #!/bin/bash
 set -euo pipefail
 
-# Release bx: build, tag, create GitHub release, update Homebrew formula
+# Release bx: build, tag, create GitHub release, publish to npm.
+# No Homebrew formula any more - holtwick/tap/bx is the cask of BX.app.
 # Usage: pnpm release
 # Requires: gh (GitHub CLI)
 
@@ -79,48 +80,7 @@ fi
 
 npm publish --access public
 
-# Update Homebrew formula
-SHA=$(shasum -a 256 dist/bx.js | awk '{print $1}')
-
-TAP_DIR=$(brew --repository holtwick/tap 2>/dev/null || echo "")
-if [ -z "${TAP_DIR}" ] || [ ! -d "${TAP_DIR}" ]; then
-  echo ""
-  echo "Homebrew tap not found. Run: brew tap holtwick/tap"
-  echo "Then update Formula/bx.rb manually:"
-  echo "  url: https://github.com/holtwick/bx-mac/releases/download/${TAG}/bx.js"
-  echo "  sha256: ${SHA}"
-  exit 0
-fi
-
-mkdir -p "${TAP_DIR}/Formula"
-cat > "${TAP_DIR}/Formula/bx.rb" << FORMULA
-class Bx < Formula
-  desc "Launch apps in a macOS sandbox — only the project directory is accessible"
-  homepage "https://github.com/holtwick/bx-mac"
-  url "https://github.com/holtwick/bx-mac/releases/download/${TAG}/bx.js"
-  sha256 "${SHA}"
-  version "${VERSION}"
-  license "MIT"
-
-  depends_on "node"
-  depends_on :macos
-
-  def install
-    bin.install "bx.js" => "bx"
-  end
-
-  test do
-    assert_match "sandbox:", shell_output("#{bin}/bx 2>&1", 1)
-  end
-end
-FORMULA
-
-cd "${TAP_DIR}"
-git add Formula/bx.rb
-git commit -m "bx ${VERSION}"
-git push
-
 echo ""
 echo "Done! Released bx ${TAG}"
 echo "  GitHub: https://github.com/holtwick/bx-mac/releases/tag/${TAG}"
-echo "  Homebrew: brew install holtwick/tap/bx"
+echo "  npm: npm install -g bx-mac"

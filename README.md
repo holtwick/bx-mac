@@ -17,6 +17,8 @@
 [![How it works](https://img.shields.io/badge/How%20it%20works-bxsandbox.app-2c2c2e?style=for-the-badge)](https://bxsandbox.app/)
 [![Buy](https://img.shields.io/badge/Buy-one--time%20purchase-3e5468?style=for-the-badge)](https://bxsandbox.app/buy)
 
+or with Homebrew: `brew install --cask holtwick/tap/bx`
+
 <a href="https://bxsandbox.app/"><img src="assets/bx-app-screenshot.png" alt="BX.app — launcher list and protection tree" width="820"></a>
 
 </div>
@@ -98,9 +100,6 @@ If you need stricter, deny-first isolation, consider [Agent Safehouse](https://a
 ## 📥 Install
 
 ```bash
-# Homebrew
-brew install holtwick/tap/bx
-
 # npm
 npm install -g bx-mac
 
@@ -112,6 +111,9 @@ pnpm link -g
 ```
 
 **Requirements:** macOS (only tested on Tahoe 26.4, feedback welcome), Node.js >= 22
+
+> [!NOTE]
+> The Homebrew formula for this CLI is gone. `brew install holtwick/tap/bx` now installs [BX.app](https://bxsandbox.app/), its successor. A copy of the CLI installed through Homebrew earlier keeps working, but no longer updates; `brew uninstall bx` removes it.
 
 ## 🚀 Modes
 
